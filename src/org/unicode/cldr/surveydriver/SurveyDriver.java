@@ -4,6 +4,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -19,9 +21,12 @@ import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.logging.Logs;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.remote.SessionId;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
+import com.google.gson.Gson;
 
 /**
  * Perform automated testing of the CLDR Survey Tool using Selenium WebDriver.
@@ -59,9 +64,13 @@ public class SurveyDriver {
 	 * Configure login, which may depend on BASE_URL.
 	 * TODO: enable multiple distinct logins for the same server, so that each node in the grid can
 	 * run as a different user. Probably should use configuration files instead of hard-coding here.
+	 * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales.
 	 */
-	static final String LOGIN_URL = "survey?letmein=pTFjaLECN&email=admin@";
-	// static final String LOGIN_URL = "survey?email=hinarlinguist.wul7q2qkq@dbi4.utilika%20foundation.example.com&uid=2by_67IPy";
+	static final String LOGIN_URL1 = "survey?letmein=pTFjaLECN&email=admin@";
+	static final String LOGIN_URL2 = "survey?email=sundaydriver.ta9emn2f.@czca.bangladesh.example.com&uid=ME0BtTx7J";
+	static final String loginUrlArray[] = {
+			LOGIN_URL1, LOGIN_URL2
+	};
 
 	static final long TIME_OUT_SECONDS = 30;
 	static final long SLEEP_MILLISECONDS = 100;
@@ -79,10 +88,14 @@ public class SurveyDriver {
 	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-3.9.1.jar -role node
 	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-3.9.1.jar -role node -port 5556
 	 */
-	static final boolean USE_REMOTE_WEBDRIVER = false;
+	static final boolean USE_REMOTE_WEBDRIVER = true;
+	static final String REMOTE_WEBDRIVER_URL = "http://localhost:4444";
 
-	WebDriver driver;
-	WebDriverWait wait;
+	private WebDriver driver;
+	private WebDriverWait wait;
+	private SessionId sessionId = null;
+	private String nodePort = "5555"; // default, may be changed
+	private boolean gotComprehensiveCoverage = false;
 
 	public static void main(String[] args) {
 		SurveyDriver s = new SurveyDriver();
@@ -113,16 +126,50 @@ public class SurveyDriver {
 
 		if (USE_REMOTE_WEBDRIVER) {
 			try {
-				driver = new RemoteWebDriver(new URL("http://localhost:4444/wd/hub"), options);
+				driver = new RemoteWebDriver(new URL(REMOTE_WEBDRIVER_URL + "/wd/hub"), options);
 			} catch (MalformedURLException e) {
 				System.out.println(e);
 			}
-			System.out.println("Session id = " + ((RemoteWebDriver) driver).getSessionId());
+			sessionId = ((RemoteWebDriver) driver).getSessionId();
+			System.out.println("Session id = " + sessionId); // e.g., 9c0d7d317d64cb53b6eaefc70427d4d8
 		} else {
 			driver = new ChromeDriver(options);
 			// driver.manage().window().maximize(); // doesn't work
 		}
 		wait = new WebDriverWait(driver, TIME_OUT_SECONDS, SLEEP_MILLISECONDS);
+		if (USE_REMOTE_WEBDRIVER) {
+			/*
+			 * http://localhost:4444/grid/api/testsession?session=<SessionIdGoesHere>
+			 * That returns json such as:
+			 * {"msg":"slot found !",
+			 * "success":true,
+			 * "session":"9fb6ca4b0548bc4708bfd4708732bdd6",
+			 * "internalKey":"1ae1fb96-8188-4c0e-9f49-051993962939",
+			 * "inactivityTime":108,
+			 * "proxyId":"http://192.168.2.10:5556"}
+			 *
+			 * The proxyId tells the port (like 5556) which in turn tells us which node we're on
+			 */
+			String url = REMOTE_WEBDRIVER_URL + "/grid/api/testsession?session=" + sessionId;
+			// String url = REMOTE_WEBDRIVER_URL + "/grid/api/hub/status?" + sessionId;
+
+			driver.get(url);
+			String jsonString = driver.findElement(By.tagName("body")).getText();
+			System.out.println("jsonString = " + jsonString);
+			Gson gson = new Gson();
+			SurveyDriverTestSession obj = gson.fromJson(jsonString, SurveyDriverTestSession.class);
+			if (obj == null) {
+				System.out.println("Null SurveyDriverTestSession in setUp");
+			} else {
+				String proxyId = obj.proxyId;
+				if (proxyId != null) {
+					Matcher m = Pattern.compile(":(\\d+)$").matcher(proxyId);
+					if (m.find()) {
+						nodePort = m.group(1); // e.g., "5556"
+					}
+				}
+			}
+		}
 	}
 
 	/**
@@ -166,7 +213,8 @@ public class SurveyDriver {
 		 * TODO: configure the locale and page on a per-node basis, to enable multiple simulated
 		 * users to be voting in multiple locales and/or pages. 
 		 */
-		String loc = "ar";
+		String loc = "sr";
+		// String loc = "ar";
 		// String loc = "en_CA";
 		String page = "Languages_A_D";
 		String url = BASE_URL + "v#/" + loc + "/" + page;
@@ -227,6 +275,11 @@ public class SurveyDriver {
 		if (!waitUntilElementInactive("overlay", url)) {
 			return false;
 		}
+		if (!gotComprehensiveCoverage && !chooseComprehensiveCoverage(url)) {
+			return false;
+		}
+		gotComprehensiveCoverage = true;
+
 		double firstClickTime = 0;
 
 		/*
@@ -250,37 +303,62 @@ public class SurveyDriver {
 			for (int i = 0; i < rowIds.length; i++) {
 				String rowId = "r@" + rowIds[i];
 				boolean doAdd = (i == rowIds.length - 1) && cell.equals("proposedcell");
+				String tagName = doAdd ? "button" : "input";
 				String cellId = doAdd ? "addcell" : cell;
 				WebElement rowEl = null, columnEl = null, clickEl = null;
-				try {
-					rowEl = driver.findElement(By.id(rowId));
-				} catch (Exception e) {
-					System.out.println(e);
-				}
-				if (rowEl == null) {
-					System.out.println("❌ Fast vote test failed, missing row id " + rowId + " for " + url);
-					return false;
-				}
-				try {
-					columnEl = rowEl.findElement(By.id(cellId));
-				} catch (Exception e) {
-					System.out.println(e);
-				}
-				if (columnEl == null) {
-					System.out
-							.println("❌ Fast vote test failed, no column " + cellId + " for row " + rowId + " for "
-									+ url);
-					return false;
-				}
-				String tagName = doAdd ? "button" : "input";
-				try {
-					clickEl = columnEl.findElement(By.tagName(tagName));
-				} catch (StaleElementReferenceException e) {
-					System.out.println("Continuing after StaleElementReferenceException for findElement by tagName "
-							+ rowId + " for " + url);
-					continue;
-				} catch (Exception e) {
-					System.out.println(e);
+				int repeats = 0;
+				for (;;) {
+					try {
+						rowEl = driver.findElement(By.id(rowId));
+					} catch (StaleElementReferenceException e) {
+						if (++repeats > 4) {
+							break;
+						}
+						System.out
+								.println("Continuing after StaleElementReferenceException for findElement by id rowId "
+										+ rowId + " for " + url);
+						continue;
+					} catch (Exception e) {
+						System.out.println(e);
+						break;
+					}
+					if (rowEl == null) {
+						System.out.println("❌ Fast vote test failed, missing row id " + rowId + " for " + url);
+						return false;
+					}
+					try {
+						columnEl = rowEl.findElement(By.id(cellId));
+					} catch (StaleElementReferenceException e) {
+						if (++repeats > 4) {
+							break;
+						}
+						System.out
+								.println("Continuing after StaleElementReferenceException for findElement by id cellId "
+										+ cellId + " for " + url);
+						continue;
+					} catch (Exception e) {
+						System.out.println(e);
+						break;
+					}
+					if (columnEl == null) {
+						System.out.println(
+								"❌ Fast vote test failed, no column " + cellId + " for row " + rowId + " for " + url);
+						return false;
+					}
+					try {
+						clickEl = columnEl.findElement(By.tagName(tagName));
+					} catch (StaleElementReferenceException e) {
+						if (++repeats > 4) {
+							break;
+						}
+						System.out.println("Continuing after StaleElementReferenceException for findElement by tagName "
+								+ rowId + " for " + url);
+						continue;
+					} catch (Exception e) {
+						System.out.println(e);
+						break;
+					}
+					break;
 				}
 				if (clickEl == null) {
 					System.out.println(
@@ -310,10 +388,17 @@ public class SurveyDriver {
 					return false;
 				}
 				if (doAdd) {
+					/*
+					 * Problem here: waitInputBoxAppears can get StaleElementReferenceException five times,
+					 * must be for rowEl which isn't re-gotten. For now at least, just continue loop if
+					 * waitInputBoxAppears returns null.
+					 */
 					WebElement inputEl = waitInputBoxAppears(rowEl, url);
 					if (inputEl == null) {
-						System.out.println("❌ Fast vote test failed, didn't see input box for " + url);
-						return false;
+						System.out.println("Warning: continuing, didn't see input box for " + url);
+						continue;
+						// System.out.println("❌ Fast vote test failed, didn't see input box for " + url);
+						// return false;
 					}
 					inputEl = waitUntilRowCellTagElementClickable(inputEl, rowId, cellId, "input", url);
 					if (inputEl == null) {
@@ -354,7 +439,8 @@ public class SurveyDriver {
 	 * Log into Survey Tool.
 	 */
 	private boolean login() {
-		String url = BASE_URL + LOGIN_URL;
+		String url = BASE_URL + ("5555".equals(nodePort) ? loginUrlArray[0] : loginUrlArray[1]);
+		System.out.println("Logging in to " + url);
 		driver.get(url);
 
 		/*
@@ -366,6 +452,42 @@ public class SurveyDriver {
 			return false;
 		}
 		if (!waitUntilLoadingMessageDone(url)) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Choose "Comprehensive" from the "Coverage" menu
+	 *
+	 * @param url the current URL, only for error message
+	 * @return true for success, false for failure
+	 */
+	private boolean chooseComprehensiveCoverage(String url) {
+		String id = "title-coverage";
+		WebElement menu = driver.findElement(By.id(id));
+		if (!waitUntilElementClickable(menu, url)) {
+			return false;
+		}
+		try {
+			menu.click();
+		} catch (Exception e) {
+			System.out.println("Exception caught while trying to open Coverage menu");
+			System.out.println(e);
+			return false;
+		}
+		/*
+		 * <a class="coverage-list" data-value="comprehensive" href="#">Comprehensive</a>
+		 */
+		WebElement item = menu.findElement(By.cssSelector("a[data-value='comprehensive']"));
+		if (!waitUntilElementClickable(item, url)) {
+			return false;
+		}
+		try {
+			item.click();
+		} catch (Exception e) {
+			System.out.println("Exception caught while trying to choose Comprehensive from Coverage menu");
+			System.out.println(e);
 			return false;
 		}
 		return true;
@@ -616,13 +738,23 @@ public class SurveyDriver {
 		 * Note that the add button does NOT contain the input tag, but the addcell contains both the add button
 		 * and the input tag.
 		 */
-		WebElement addCell = rowEl.findElement(By.id("addcell"));
 		WebElement inputEl = null;
-		try {
-			inputEl = wait.until(ExpectedConditions.presenceOfNestedElementLocatedBy(addCell, By.tagName("input")));
-		} catch (Exception e) {
-			System.out.println(e);
-			System.out.println("❌ Test failed, maybe timed out, waiting for input in addcell in " + url);
+		int repeats = 0;
+		for (;;) {
+			try {
+				WebElement addCell = rowEl.findElement(By.id("addcell"));
+				inputEl = wait.until(ExpectedConditions.presenceOfNestedElementLocatedBy(addCell, By.tagName("input")));
+			} catch (StaleElementReferenceException e) {
+				if (++repeats > 4) {
+					break;
+				}
+				System.out.println("waitInputBoxAppears repeating for StaleElementReferenceException");
+				continue;
+			} catch (Exception e) {
+				System.out.println(e);
+				System.out.println("❌ Test failed, maybe timed out, waiting for input in addcell in " + url);
+			}
+			break;
 		}
 		return inputEl;
 	}
@@ -671,6 +803,13 @@ public class SurveyDriver {
 				WebElement columnEl = rowEl.findElement(By.id(cellId));
 				clickEl = columnEl.findElement(By.tagName(tagName));
 			} catch (Exception e) {
+				/*
+				 * TODO: sometimes get here with org.openqa.selenium.NoSuchElementException
+				 *       no such element: Unable to locate element: {"method":"tag name","selector":"input"}
+				 * Called by testFastVotingInner with tagName = "input"
+				 * Repeat in that case, similar to StaleElementReferenceException? Or do we need to
+				 * repeat at a higher level, and/or re-get clickEl?
+				 */
 				System.out.println(e);
 				break;
 			}
@@ -745,5 +884,14 @@ public class SurveyDriver {
 			return false;
 		}
 		return true;
+	}
+
+	class SurveyDriverTestSession {
+		String msg = null;
+		String success = null;
+		String session = null;
+		String internalKey = null;
+		String inactivityTime = null;
+		String proxyId = null;
 	}
 }
