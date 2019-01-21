@@ -60,18 +60,6 @@ public class SurveyDriver {
 	static final String BASE_URL = "http://localhost:8080/cldr-apps/";
 	// static final String BASE_URL = "http://cldr-smoke.unicode.org/smoketest/";
 
-	/*
-	 * Configure login, which may depend on BASE_URL.
-	 * TODO: enable multiple distinct logins for the same server, so that each node in the grid can
-	 * run as a different user. Probably should use configuration files instead of hard-coding here.
-	 * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales.
-	 */
-	static final String LOGIN_URL1 = "survey?letmein=pTFjaLECN&email=admin@";
-	static final String LOGIN_URL2 = "survey?email=sundaydriver.ta9emn2f.@czca.bangladesh.example.com&uid=ME0BtTx7J";
-	static final String loginUrlArray[] = {
-			LOGIN_URL1, LOGIN_URL2
-	};
-
 	static final long TIME_OUT_SECONDS = 30;
 	static final long SLEEP_MILLISECONDS = 100;
 
@@ -94,7 +82,7 @@ public class SurveyDriver {
 	private WebDriver driver;
 	private WebDriverWait wait;
 	private SessionId sessionId = null;
-	private String nodePort = "5555"; // default, may be changed
+	private int nodePort = 5555; // default, may be changed
 	private boolean gotComprehensiveCoverage = false;
 
 	public static void main(String[] args) {
@@ -165,7 +153,7 @@ public class SurveyDriver {
 				if (proxyId != null) {
 					Matcher m = Pattern.compile(":(\\d+)$").matcher(proxyId);
 					if (m.find()) {
-						nodePort = m.group(1); // e.g., "5556"
+						nodePort = Integer.parseInt(m.group(1)); // e.g., 5556
 					}
 				}
 			}
@@ -439,7 +427,7 @@ public class SurveyDriver {
 	 * Log into Survey Tool.
 	 */
 	private boolean login() {
-		String url = BASE_URL + ("5555".equals(nodePort) ? loginUrlArray[0] : loginUrlArray[1]);
+		String url = BASE_URL + getNodeLoginQuery();
 		System.out.println("Logging in to " + url);
 		driver.get(url);
 
@@ -455,6 +443,51 @@ public class SurveyDriver {
 			return false;
 		}
 		return true;
+	}
+
+	/**
+	 * Get a query string for logging in as a particular user. It may depend on which Selenium node
+	 * we're running on. It could also depend on BASE_URL if we're running on SmokeTest rather than
+	 * localhost.
+	 *
+	 * Currently this set of users depends on manual creation on localhost or SmokeTest. For convenience
+	 * we might eventually want a way to create a set of users programmatically.
+	 *
+	 * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales,
+	 * so an easy way is to make them all TC or admin.
+	 */
+	private String getNodeLoginQuery() {
+		if (nodePort == 5555) {
+			return "survey?email=sundaydriver.ta9emn2f.@czca.bangladesh.example.com&uid=ME0BtTx7J";
+		}
+		if (nodePort == 5556) {
+			return "survey?email=mondaydriver.fvuisg2in@sisi.sil.example.com&uid=OjATx0fTt";
+		}
+		if (nodePort == 5557) {
+			return "survey?email=tuesdaydriver.smw4grsg0@ork0.netflix.example.com&uid=QEuNcNCvi";
+		}
+		if (nodePort == 5558) {
+			return "survey?email=wednesdaydriver.kesjczv8q@8sye.afghan-csa.example.com&uid=MjpHbYuJY";
+		}
+		if (nodePort == 5559) {
+			return "survey?email=thursdaydriver.klxizrpyc@p9mn.welsh-lc.example.com&uid=cMkLuCab1";
+		}
+		if (nodePort == 5560) {
+			return "survey?email=fridaydriver.kclabyoxi@fgkg.mozilla.example.com&uid=qSR.KZ57V";
+		}
+		if (nodePort == 5561) {
+			return "survey?email=saturdaydriver.oelbvfn0x@smiz.cherokee.example.com&uid=r3Lim3OFL";
+		}
+		if (nodePort == 5562) {
+			return "survey?email=backseatdriver.cogihy42h@jqs9.india.example.com&uid=LenA3VJSK";
+		}
+		if (nodePort == 5563) {
+			return "survey?email=studentdriver.h.ze76.2p@nd3e.government%20of%20pakistan%20-%20national%20language%20authority.example.com&uid=S5fpuRqHW";
+		}
+		/*
+		 * 5564 or other:
+		 */
+		return "survey?letmein=pTFjaLECN&email=admin@";
 	}
 
 	/**
