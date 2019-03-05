@@ -45,12 +45,25 @@ import com.google.gson.Gson;
  *
  * A tutorial for setting up a project using Selenium in Eclipse:
  *   https://www.guru99.com/selenium-tutorial.html
+ * 
+ * The Selenium jar files must be added to the Eclipse project. Download from
+ * https://www.seleniumhq.org/download/ and unzip to get a folder like selenium-java-3.141.59.
+ * In Eclipse, right-click on "survey-driver" and select Properties. Click on "Java Build Path".
+ * Click on the Libraries tab. Click on "Add External JARs". Navigate to the selenium folder and
+ * add all the jar files outside the "lib" folder. Click on "Add External JARs" again and add all
+ * the jar files inside "lib".
+ *
+ * For Gson, CLDR already includes cldr/tools/java/libs/gson.jar. Take advantage of that
+ * and add it to Eclipse as follows: Right-click on "survey-driver" and select Properties.
+ * Click on "Java Build Path". Click on the Libraries tab. Click on "Add External JARs".
+ * Navigate to cldr/tools/java/libs and select gson.jar.
  */
 public class SurveyDriver {
 	/*
 	 * Enable/disable specific tests using these booleans
 	 */
-	static final boolean TEST_FAST_VOTING = true;
+	static final boolean TEST_VETTING_TABLE = true;
+	static final boolean TEST_FAST_VOTING = false;
 	static final boolean TEST_LOCALES_AND_PAGES = false;
 	static final boolean TEST_ANNOTATION_VOTING = false;
 
@@ -72,15 +85,15 @@ public class SurveyDriver {
 	 *
 	 * Sample commands to start the grid (first node is default port 5555, second node explicit port 5556):
 	 *
-	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-3.9.1.jar -role hub
-	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-3.9.1.jar -role node
-	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-3.9.1.jar -role node -port 5556
+	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role hub
+	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role node
+	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role node -port 5556
 	 */
 	static final boolean USE_REMOTE_WEBDRIVER = true;
 	static final String REMOTE_WEBDRIVER_URL = "http://localhost:4444";
 
-	private WebDriver driver;
-	private WebDriverWait wait;
+	public WebDriver driver;
+	public WebDriverWait wait;
 	private SessionId sessionId = null;
 	private int nodePort = 5555; // default, may be changed
 	private boolean gotComprehensiveCoverage = false;
@@ -88,6 +101,9 @@ public class SurveyDriver {
 	public static void main(String[] args) {
 		SurveyDriver s = new SurveyDriver();
 		s.setUp();
+		if (TEST_VETTING_TABLE) {
+			SurveyDriverVettingTable.testVettingTable(s);
+		}
 		if (TEST_FAST_VOTING) {
 			s.testFastVoting();
 		}
@@ -164,6 +180,7 @@ public class SurveyDriver {
 	 * Clean up when finished testing.
 	 */
 	private void tearDown() {
+		System.out.println("survey-driver is quitting, goodbye from node on port " + nodePort);
 		if (driver != null) {
 			/*
 			 * This five-second sleep may not always be appropriate. It can help to see the browser for a few seconds
@@ -287,6 +304,7 @@ public class SurveyDriver {
 		 */
 		String[] rowIds = { "f3d4397b739b287", "6899b21f19eef8cc", "1660459cc74c9aec", "7d1d3cbd260601a4" };
 		String[] cellIds = { "nocell", "proposedcell" };
+		final Boolean verbose = true;
 		for (String cell : cellIds) {
 			for (int i = 0; i < rowIds.length; i++) {
 				String rowId = "r@" + rowIds[i];
@@ -295,6 +313,10 @@ public class SurveyDriver {
 				String cellId = doAdd ? "addcell" : cell;
 				WebElement rowEl = null, columnEl = null, clickEl = null;
 				int repeats = 0;
+				if (verbose) {
+					String op = cell.equals("nocell") ? "Abstain" : "Vote";
+					System.out.println(op + " row " + (i + 1) + " (" + rowId + ")");
+				}
 				for (;;) {
 					try {
 						rowEl = driver.findElement(By.id(rowId));
@@ -370,6 +392,13 @@ public class SurveyDriver {
 				}
 				try {
 					clickOnRowCellTagElement(clickEl, rowId, cellId, tagName, url);
+				} catch (StaleElementReferenceException e) {
+					if (++repeats > 4) {
+						break;
+					}
+					System.out.println("Continuing after StaleElementReferenceException for clickEl.click for row "
+							+ rowId + " for " + url);
+					continue;
 				} catch (Exception e) {
 					System.out.println(e);
 					System.out.println("❌ Fast vote test failed, clickEl.click for row " + rowId + " for " + url);
@@ -390,8 +419,10 @@ public class SurveyDriver {
 					}
 					inputEl = waitUntilRowCellTagElementClickable(inputEl, rowId, cellId, "input", url);
 					if (inputEl == null) {
-						System.out.println("❌ Fast vote test failed, input box not clickable for " + url);
-						return false;
+						System.out.println("Warning: continuing, input box not clickable for " + url);
+						continue;
+						// System.out.println("❌ Fast vote test failed, input box not clickable for " + url);
+						// return false;
 					}
 					inputEl.clear();
 					inputEl.click();
@@ -426,7 +457,7 @@ public class SurveyDriver {
 	/**
 	 * Log into Survey Tool.
 	 */
-	private boolean login() {
+	public boolean login() {
 		String url = BASE_URL + getNodeLoginQuery();
 		System.out.println("Logging in to " + url);
 		driver.get(url);
@@ -452,6 +483,16 @@ public class SurveyDriver {
 	 *
 	 * Currently this set of users depends on manual creation on localhost or SmokeTest. For convenience
 	 * we might eventually want a way to create a set of users programmatically.
+	 *
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'SundayDriver_TESTER_', 'sundaydriver.ta9emn2f.@czca.bangladesh.example.com', 'Bangladesh Computer Council', 'ME0BtTx7J');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'MondayDriver_TESTER_', 'mondaydriver.fvuisg2in@sisi.sil.example.com', 'SIL', 'OjATx0fTt');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'TuesdayDriver_TESTER_', 'tuesdaydriver.smw4grsg0@ork0.netflix.example.com', 'Netflix', 'QEuNcNCvi');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'WednesdayDriver_TESTER_', 'wednesdaydriver.kesjczv8q@8sye.afghan-csa.example.com', 'Afghan_csa', 'MjpHbYuJY');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'ThursdayDriver_TESTER_', 'thursdaydriver.klxizrpyc@p9mn.welsh-lc.example.com', 'Welsh LC', 'cMkLuCab1');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'FridayDriver_TESTER_', 'fridaydriver.kclabyoxi@fgkg.mozilla.example.com', 'Mozilla', 'qSR.KZ57V');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'SaturdayDriver_TESTER_', 'saturdaydriver.oelbvfn0x@smiz.cherokee.example.com', 'Cherokee', 'r3Lim3OFL');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'BackseatDriver_TESTER_', 'backseatdriver.cogihy42h@jqs9.india.example.com', 'India', 'LenA3VJSK');
+	insert into cldr_users(userlevel, name, email, org, password) values(1, 'StudentDriver_TESTER_', 'studentdriver.h.ze76.2p@nd3e.government of pakistan - national language authority.example.com', 'Government of Pakistan - National Language Authority', 'S5fpuRqHW');
 	 *
 	 * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales,
 	 * so an easy way is to make them all TC or admin.
@@ -651,7 +692,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	private boolean waitForTitle(String s, String url) {
+	public boolean waitForTitle(String s, String url) {
 		try {
 			wait.until(new ExpectedCondition<Boolean>() {
 				@Override
@@ -673,7 +714,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	private boolean waitUntilLoadingMessageDone(String url) {
+	public boolean waitUntilLoadingMessageDone(String url) {
 		String loadingId = "LoadingMessageSection";
 		try {
 			wait.until(new ExpectedCondition<Boolean>() {
@@ -697,7 +738,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	private boolean hideLeftSidebar(String url) {
+	public boolean hideLeftSidebar(String url) {
 		String id = "left-sidebar";
 		WebElement bar = driver.findElement(By.id(id));
 		if (bar.getAttribute("class").contains("active")) {
@@ -740,7 +781,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	private boolean waitUntilElementInactive(String id, String url) {
+	public boolean waitUntilElementInactive(String id, String url) {
 		try {
 			wait.until(new ExpectedCondition<Boolean>() {
 				@Override
@@ -764,7 +805,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return the input element, or null for failure
 	 */
-	private WebElement waitInputBoxAppears(WebElement rowEl, String url) {
+	public WebElement waitInputBoxAppears(WebElement rowEl, String url) {
 		/*
 		 * Caution: a row may have more than one input element -- for example, the "radio" buttons are input elements.
 		 * First we need to find the addcell for this row, then find the input tag inside the addcell.
@@ -777,6 +818,9 @@ public class SurveyDriver {
 			try {
 				WebElement addCell = rowEl.findElement(By.id("addcell"));
 				inputEl = wait.until(ExpectedConditions.presenceOfNestedElementLocatedBy(addCell, By.tagName("input")));
+				/* 
+				 * TODO: don't wait here for 30 seconds, as sometimes happens...
+				 */
 			} catch (StaleElementReferenceException e) {
 				if (++repeats > 4) {
 					break;
@@ -784,6 +828,10 @@ public class SurveyDriver {
 				System.out.println("waitInputBoxAppears repeating for StaleElementReferenceException");
 				continue;
 			} catch (Exception e) {
+				/*
+				 * org.openqa.selenium.TimeoutException: Expected condition failed: waiting for visibility of element located by By.tagName:
+				 * input (tried for 30 second(s) with 100 milliseconds interval)
+				 */
 				System.out.println(e);
 				System.out.println("❌ Test failed, maybe timed out, waiting for input in addcell in " + url);
 			}
@@ -820,7 +868,8 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return the (possibly updated) clickEl for success, null for failure
 	 */
-	private WebElement waitUntilRowCellTagElementClickable(WebElement clickEl, String rowId, String cellId, String tagName,
+	public WebElement waitUntilRowCellTagElementClickable(WebElement clickEl, String rowId, String cellId,
+			String tagName,
 			String url) {
 		int repeats = 0;
 		for (;;) {
@@ -863,7 +912,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	private boolean clickOnRowCellTagElement(WebElement clickEl, String rowId, String cellId, String tagName,
+	public boolean clickOnRowCellTagElement(WebElement clickEl, String rowId, String cellId, String tagName,
 			String url) {
 		int repeats = 0;
 		for (;;) {
@@ -887,7 +936,7 @@ public class SurveyDriver {
 			}
 		}
 		System.out.println(
-				"❌ Test failed in clickOnRowCellTagElement for " + rowId + "," + cellId + "," + tagName + " in " + url);
+				"❗ Test failed in clickOnRowCellTagElement for " + rowId + "," + cellId + "," + tagName + " in " + url);
 		return false;
 	}
 
@@ -898,7 +947,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	private boolean waitUntilClassChecking(boolean checking, String url) {
+	public boolean waitUntilClassChecking(boolean checking, String url) {
 		String className = "tr_checking2";
 		try {
 			wait.until(new ExpectedCondition<Boolean>() {
