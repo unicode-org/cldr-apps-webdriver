@@ -62,8 +62,8 @@ public class SurveyDriver {
 	/*
 	 * Enable/disable specific tests using these booleans
 	 */
-	static final boolean TEST_VETTING_TABLE = true;
-	static final boolean TEST_FAST_VOTING = false;
+	static final boolean TEST_VETTING_TABLE = false;
+	static final boolean TEST_FAST_VOTING = true;
 	static final boolean TEST_LOCALES_AND_PAGES = false;
 	static final boolean TEST_ANNOTATION_VOTING = false;
 
@@ -239,7 +239,7 @@ public class SurveyDriver {
 				 * Sometimes we get "org.openqa.selenium.StaleElementReferenceException:
 				 * stale element reference: element is not attached to the page document".
 				 * Presumably this happens due to ajax response causing the table to be rebuilt.
-				 * TODO: catch this exception and continue wherever it occurs. Ideally also survey.js
+				 * TODO: catch this exception and continue wherever it occurs. Ideally also CldrSurveyVettingTable.js
 				 * may be revised to update the table in place when possible instead of rebuilding the
 				 * table from scratch so often. Reference: https://unicode.org/cldr/trac/ticket/11571
 				 */
