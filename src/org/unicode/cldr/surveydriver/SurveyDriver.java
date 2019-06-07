@@ -73,8 +73,8 @@ public class SurveyDriver {
 	/*
 	 * Enable/disable specific tests using these booleans
 	 */
-	static final boolean TEST_VETTING_TABLE = false;
-	static final boolean TEST_FAST_VOTING = true;
+	static final boolean TEST_VETTING_TABLE = true;
+	static final boolean TEST_FAST_VOTING = false;
 	static final boolean TEST_LOCALES_AND_PAGES = false;
 	static final boolean TEST_ANNOTATION_VOTING = false;
 

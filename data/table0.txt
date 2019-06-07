@@ -1,0 +1,41 @@
+<table id="vetting-table" class="data table table-bordered vetting-page">
+<thead>
+<tr class="headingb active">
+<!--  see stui.js for the following -->
+    <th title="Code for this item" id="null">Code</th>
+	<th title="Comparison value" id="null">English</th>
+	<th title="Abstain from voting on this item" id="null" class="d-no">Abstain</th>
+	<th title="Shows a checkmark if you voted" id="null" style="display: none">Voting</th>
+	<th title="Approval Status" id="null" class="d-status">A</th>
+	<th title="Status Icon" id="null" style="display: none">Errors</th>
+	<th title="Winning value" id="null">Winning</th>
+	<th title="Add another value" id="null">Add</th><th title="Other non-winning items" id="null">Others</th>
+<!--	<th title="$flyoverchange" id='stui-htmlchange' class='d-change'></th>-->
+</tr>
+</thead>
+<tbody><tr id="null" class="undefined cov40">
+	<th class="partsection" colspan="9">
+		<a id="Numbering System">Numbering System</a>
+	</th>
+</tr><tr id="r@7b8ee7884f773afa" class="vother cov40">
+			<td id="codecell" class="d-code" title="Code for this item"><span>default</span></td>
+			<td id="comparisoncell" title="Comparison value" class="d-disp" dir="ltr" lang="en-ZZ"><span class="subSpan">latn</span><div class="d-example well well-sm" dir="ltr" lang="en-ZZ"><div class="cldr_example">2345</div></div><div class="infos-code"><img src="example.png" alt="Example"></div></td>
+			<td id="nocell" title="undefined" class="d-no-vo-false"><label title="" class="btn btn-default" data-original-title="Vote"><input id="NO__xauhj" class="ichoice-x" type="radio" title="click to vote" value=""></label></td>
+			<td style="display: none" id="votedcell" class="d-vo" title="Shows a checkmark if you voted"></td>
+			<td id="statuscell" class="d-dr-missing d-dr-status" title="Status: Missing"></td>
+			<td style="display: none" id="errcell" class="d-st-okay" title="Status Icon"></td>
+			<td id="proposedcell" title="Winning value" class="d-win" dir="ltr" lang="aa"><span class="s-flag-d" title="Losing items may be flagged for CLDR Committee review.">&nbsp; &nbsp;</span><div class="d-item"><div class="choice-field"><label title="" class="btn btn-default" data-original-title="Vote"><input id="v4oaR4oaR4oaR__xauhj" class="ichoice-o" type="radio" title="click to vote" value="↑↑↑"></label><span class="subSpan"><span class="fallback" dir="ltr" lang="aa">latn</span></span></div><div class="d-example well well-sm" dir="ltr" lang="aa"><div class="cldr_example">2345</div></div></div></td>
+			<td id="addcell" title="Add another value" class="d-win"><form class="form-inline"><div class="button-add form-group"><button class="btn btn-primary" title="" type="submit" data-original-title="Add"><span class="glyphicon glyphicon-plus"></span></button></div></form></td>
+			<td id="othercell" title="Other non-winning items" class="d-win" dir="ltr" lang="aa"></td>
+		</tr><tr id="r@602dd39f06ddeb32" class="vother cov40">
+			<td id="codecell" class="d-code" title="Code for this item"><span>native</span></td>
+			<td id="comparisoncell" title="Comparison value" class="d-disp" dir="ltr" lang="en-ZZ"><span class="subSpan">latn</span><div class="d-example well well-sm" dir="ltr" lang="en-ZZ"><div class="cldr_example">2345</div></div><div class="infos-code"><img src="example.png" alt="Example"></div></td>
+			<td id="nocell" title="undefined" class="d-no-vo-false"><label title="" class="btn btn-default" data-original-title="Vote"><input id="NO__xgorkb" class="ichoice-x" type="radio" title="click to vote" value=""></label></td>
+			<td style="display: none" id="votedcell" class="d-vo" title="Shows a checkmark if you voted"></td>
+			<td id="statuscell" class="d-dr-missing d-dr-status" title="Status: Missing"></td>
+			<td style="display: none" id="errcell" class="d-st-okay" title="Status Icon"></td>
+			<td id="proposedcell" title="Winning value" class="d-win" dir="ltr" lang="aa"><span class="s-flag-d" title="Losing items may be flagged for CLDR Committee review.">&nbsp; &nbsp;</span><div class="d-item"><div class="choice-field"><label title="" class="btn btn-default" data-original-title="Vote"><input id="v4oaR4oaR4oaR__xgorkb" class="ichoice-o" type="radio" title="click to vote" value="↑↑↑"></label><span class="subSpan"><span class="fallback" dir="ltr" lang="aa">latn</span></span></div><div class="d-example well well-sm" dir="ltr" lang="aa"><div class="cldr_example">2345</div></div></div></td>
+			<td id="addcell" title="Add another value" class="d-win"><form class="form-inline"><div class="button-add form-group"><button class="btn btn-primary" title="" type="submit" data-original-title="Add"><span class="glyphicon glyphicon-plus"></span></button></div></form></td>
+			<td id="othercell" title="Other non-winning items" class="d-win" dir="ltr" lang="aa"></td>
+		</tr></tbody>
+</table>

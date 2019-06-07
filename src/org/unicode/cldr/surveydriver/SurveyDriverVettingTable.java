@@ -1,5 +1,10 @@
 package org.unicode.cldr.surveydriver;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
@@ -16,7 +21,8 @@ public class SurveyDriverVettingTable {
 	 * Purpose: make sure that code revisions, such as refactoring CldrSurveyVettingTable.js, do not
 	 * cause unintended changes to the table contents.
 	 *
-	 * https://unicode.org/cldr/trac/ticket/11571 "Avoid rebuilding entire table on Survey Tool update"
+	 * https://unicode-org.atlassian.net/browse/CLDR-11571 "Avoid rebuilding entire table on Survey Tool update"
+	 * https://unicode-org.atlassian.net/browse/CLDR-11943 "Implement automated testing for Survey Tool table updating"
 	 */
 	public static boolean testVettingTable(SurveyDriver s) {
 		if (!s.login()) {
@@ -55,7 +61,31 @@ public class SurveyDriverVettingTable {
 		 * Third time, after voting for new value "taml" in first row.
 		 * Finally, abstain so the next user will find the db the same as it was.
 		 */
-		String[] table = { table0, table1, table2 };
+		String[] table = { null, null, null };
+		final int tableCount = 3;
+		String dataDirName = null;
+		try {
+			dataDirName = new File("./data").getCanonicalPath();
+		} catch (IOException e1) {
+			System.out.println("Exception getting data directory: " + e1);
+			e1.printStackTrace();
+			return false;
+		}
+		for (int t = 0; t < tableCount; t++) {
+			String fName = dataDirName + "/" + "table" + t + ".txt";
+			File f = new File(fName);
+			try {
+				table[t] = normalizeTable(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8));
+			} catch (IOException e) {
+				System.out.println("Exception reading file " + fName + ": " + e);
+				e.printStackTrace();
+				return false;
+			}
+			if (t > 0 && table[t].equals(table[t - 1])) {
+				System.out.println("File " + fName + " should not be identical to the previous file");
+				return false;
+			}
+		}
 		String[] cellIds = { "proposedcell", "input", "nocell" };
 		String rowId = "r@7b8ee7884f773afa";
 		int i = 0;
@@ -94,21 +124,14 @@ public class SurveyDriverVettingTable {
 			if (!s.waitUntilClassChecking(false, url)) {
 				return false;
 			}
-			String tableHtml = tableEl.getAttribute("outerHTML");
-			/*
-			 * For unknown reasons, html varies between class="fallback" and class="fallback_root" for the same item.
-			 * That may be a bug on the server side.
-			 * Work around it here by changing "fallback_root" to "fallback".
-			 */
-			tableHtml = tableHtml.replace("fallback_root", "fallback");
-			tableHtml = tableHtml.replaceFirst("<tbody>\\s*<tr", "<tbody><tr"); // whitespace varies here at random
+			String tableHtml = normalizeTable(tableEl.getAttribute("outerHTML"));
 
 			if (table[i].equals(tableHtml)) {
 				System.out.println("✅ table " + i + " is OK");
 				++goodTableCount;
 			} else {
-				System.out.println("❌ table " + i + " is different than expected: " + tableHtml
-						+ "\n\nExpected: " + table[i] + "\n");
+				System.out.println("❌ table " + i + " is different (" + tableHtml.length() + " units):\n" + tableHtml
+						+ "\n\nExpected (" + table[i].length() + " units):\n" + table[i] + "\n");
 			}
 			++i;
 			boolean doAdd = cell.equals("input");
@@ -224,7 +247,7 @@ public class SurveyDriverVettingTable {
 			}
 		}
 
-		if (goodTableCount != 3) {
+		if (goodTableCount != tableCount) {
 			System.out.println("❌ Vetting-table test failed for " + loc + ", " + page);
 			return false;
 		}
@@ -232,108 +255,18 @@ public class SurveyDriverVettingTable {
 		return true;
 	}
 
-	static private String table0 = "<table id=\"vetting-table\" class=\"data table table-bordered vetting-page\">\n"
-			+ "<thead>\n" + "<tr class=\"headingb active\">\n" + "<!--  see stui.js for the following -->\n"
-			+ "    <th title=\"Code for this item\" id=\"null\">Code</th>\n"
-			+ "	<th title=\"Comparison value\" id=\"null\">English</th>\n"
-			+ "	<th title=\"Abstain from voting on this item\" id=\"null\" class=\"d-no\">Abstain</th>\n"
-			+ "	<th title=\"Shows a checkmark if you voted\" id=\"null\" style=\"display: none\">Voting</th>\n"
-			+ "	<th title=\"Approval Status\" id=\"null\" class=\"d-status\">A</th>\n"
-			+ "	<th title=\"Status Icon\" id=\"null\" style=\"display: none\">Errors</th>\n"
-			+ "	<th title=\"Winning value\" id=\"null\">Winning</th>\n"
-			+ "	<th title=\"Add another value\" id=\"null\">Add</th><th title=\"Other non-winning items\" id=\"null\">Others</th>\n"
-			+ "<!--	<th title=\"$flyoverchange\" id='stui-htmlchange' class='d-change'></th>-->\n" + "</tr>\n"
-			+ "</thead>\n" + "<tbody><tr id=\"null\" class=\"undefined cov40\">\n"
-			+ "	<th class=\"partsection\" colspan=\"9\">\n" + "		<a id=\"Numbering System\">Numbering System</a>\n"
-			+ "	</th>\n" + "</tr><tr id=\"r@7b8ee7884f773afa\" class=\"vother cov40\">\n"
-			+ "			<td id=\"codecell\" class=\"d-code\" title=\"Code for this item\"><span>default</span></td>\n"
-			+ "			<td id=\"comparisoncell\" title=\"Comparison value\" class=\"d-disp\" dir=\"ltr\" lang=\"en-ZZ\"><span class=\"subSpan\">latn</span><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"en-ZZ\"><div class=\"cldr_example\">2345</div></div><div class=\"infos-code\"><img src=\"example.png\" alt=\"Example\"></div></td>\n"
-			+ "			<td id=\"nocell\" title=\"undefined\" class=\"d-no-vo-false\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"NO__xauhj\" class=\"ichoice-x\" type=\"radio\" title=\"click to vote\" value=\"\"></label></td>\n"
-			+ "			<td style=\"display: none\" id=\"votedcell\" class=\"d-vo\" title=\"Shows a checkmark if you voted\"></td>\n"
-			+ "			<td id=\"statuscell\" class=\"d-dr-missing d-dr-status\" title=\"Status: Missing\"></td>\n"
-			+ "			<td style=\"display: none\" id=\"errcell\" class=\"d-st-okay\" title=\"Status Icon\"></td>\n"
-			+ "			<td id=\"proposedcell\" title=\"Winning value\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"><span class=\"s-flag-d\" title=\"Losing items may be flagged for CLDR Committee review.\">&nbsp; &nbsp;</span><div class=\"d-item\"><div class=\"choice-field\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"v4oaR4oaR4oaR__xauhj\" class=\"ichoice-o\" type=\"radio\" title=\"click to vote\" value=\"↑↑↑\"></label><span class=\"subSpan\"><span class=\"fallback\" dir=\"ltr\" lang=\"aa\">latn</span></span><div class=\"i-star\" title=\"This mark shows on the item which was approved in the last release, if any.\"></div></div><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"aa\"><div class=\"cldr_example\">2345</div></div></div></td>\n"
-			+ "			<td id=\"addcell\" title=\"Add another value\" class=\"d-win\"><form class=\"form-inline\"><div class=\"button-add form-group\"><button class=\"btn btn-primary\" title=\"\" type=\"submit\" data-original-title=\"Add\"><span class=\"glyphicon glyphicon-plus\"></span></button></div></form></td>\n"
-			+ "			<td id=\"othercell\" title=\"Other non-winning items\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"></td>\n"
-			+ "		</tr><tr id=\"r@602dd39f06ddeb32\" class=\"vother cov40\">\n"
-			+ "			<td id=\"codecell\" class=\"d-code\" title=\"Code for this item\"><span>native</span></td>\n"
-			+ "			<td id=\"comparisoncell\" title=\"Comparison value\" class=\"d-disp\" dir=\"ltr\" lang=\"en-ZZ\"><span class=\"subSpan\">latn</span><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"en-ZZ\"><div class=\"cldr_example\">2345</div></div><div class=\"infos-code\"><img src=\"example.png\" alt=\"Example\"></div></td>\n"
-			+ "			<td id=\"nocell\" title=\"undefined\" class=\"d-no-vo-false\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"NO__xgorkb\" class=\"ichoice-x\" type=\"radio\" title=\"click to vote\" value=\"\"></label></td>\n"
-			+ "			<td style=\"display: none\" id=\"votedcell\" class=\"d-vo\" title=\"Shows a checkmark if you voted\"></td>\n"
-			+ "			<td id=\"statuscell\" class=\"d-dr-missing d-dr-status\" title=\"Status: Missing\"></td>\n"
-			+ "			<td style=\"display: none\" id=\"errcell\" class=\"d-st-okay\" title=\"Status Icon\"></td>\n"
-			+ "			<td id=\"proposedcell\" title=\"Winning value\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"><span class=\"s-flag-d\" title=\"Losing items may be flagged for CLDR Committee review.\">&nbsp; &nbsp;</span><div class=\"d-item\"><div class=\"choice-field\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"v4oaR4oaR4oaR__xgorkb\" class=\"ichoice-o\" type=\"radio\" title=\"click to vote\" value=\"↑↑↑\"></label><span class=\"subSpan\"><span class=\"fallback\" dir=\"ltr\" lang=\"aa\">latn</span></span><div class=\"i-star\" title=\"This mark shows on the item which was approved in the last release, if any.\"></div></div><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"aa\"><div class=\"cldr_example\">2345</div></div></div></td>\n"
-			+ "			<td id=\"addcell\" title=\"Add another value\" class=\"d-win\"><form class=\"form-inline\"><div class=\"button-add form-group\"><button class=\"btn btn-primary\" title=\"\" type=\"submit\" data-original-title=\"Add\"><span class=\"glyphicon glyphicon-plus\"></span></button></div></form></td>\n"
-			+ "			<td id=\"othercell\" title=\"Other non-winning items\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"></td>\n"
-			+ "		</tr></tbody>\n" + "</table>";
+	private static String normalizeTable(String tableHtml) {
+		/*
+		 * For unknown reasons, html varies between class="fallback" and class="fallback_root" for the same item.
+		 * That may be a bug on the server side.
+		 * Work around it here by changing "fallback_root" to "fallback".
+		 */
+		tableHtml = tableHtml.replace("fallback_root", "fallback");
+		tableHtml = tableHtml.replaceFirst("<tbody>\\s*<tr", "<tbody><tr"); // whitespace varies here at random
 
-	static private String table1 = "<table id=\"vetting-table\" class=\"data table table-bordered vetting-page\">\n"
-			+ "<thead>\n" + "<tr class=\"headingb active\">\n" + "<!--  see stui.js for the following -->\n"
-			+ "    <th title=\"Code for this item\" id=\"null\">Code</th>\n"
-			+ "	<th title=\"Comparison value\" id=\"null\">English</th>\n"
-			+ "	<th title=\"Abstain from voting on this item\" id=\"null\" class=\"d-no\">Abstain</th>\n"
-			+ "	<th title=\"Shows a checkmark if you voted\" id=\"null\" style=\"display: none\">Voting</th>\n"
-			+ "	<th title=\"Approval Status\" id=\"null\" class=\"d-status\">A</th>\n"
-			+ "	<th title=\"Status Icon\" id=\"null\" style=\"display: none\">Errors</th>\n"
-			+ "	<th title=\"Winning value\" id=\"null\">Winning</th>\n"
-			+ "	<th title=\"Add another value\" id=\"null\">Add</th><th title=\"Other non-winning items\" id=\"null\">Others</th>\n"
-			+ "<!--	<th title=\"$flyoverchange\" id='stui-htmlchange' class='d-change'></th>-->\n" + "</tr>\n"
-			+ "</thead>\n" + "<tbody><tr id=\"null\" class=\"undefined cov40\">\n"
-			+ "	<th class=\"partsection\" colspan=\"9\">\n" + "		<a id=\"Numbering System\">Numbering System</a>\n"
-			+ "	</th>\n" + "</tr><tr id=\"r@7b8ee7884f773afa\" class=\"vother cov40\">\n"
-			+ "			<td id=\"codecell\" class=\"d-code\" title=\"Code for this item\"><span>default</span></td>\n"
-			+ "			<td id=\"comparisoncell\" title=\"Comparison value\" class=\"d-disp\" dir=\"ltr\" lang=\"en-ZZ\"><span class=\"subSpan\">latn</span><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"en-ZZ\"><div class=\"cldr_example\">2345</div></div><div class=\"infos-code\"><img src=\"example.png\" alt=\"Example\"></div></td>\n"
-			+ "			<td id=\"nocell\" title=\"undefined\" class=\"d-no-vo-true\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"NO__xauhj\" class=\"ichoice-o\" type=\"radio\" title=\"click to vote\" value=\"\"></label></td>\n"
-			+ "			<td style=\"display: none\" id=\"votedcell\" class=\"d-vo\" title=\"Shows a checkmark if you voted\"></td>\n"
-			+ "			<td id=\"statuscell\" class=\"d-dr-approved d-dr-status\" title=\"Status: Approved\"></td>\n"
-			+ "			<td style=\"display: none\" id=\"errcell\" class=\"d-st-okay\" title=\"Status Icon\"></td>\n"
-			+ "			<td id=\"proposedcell\" title=\"Winning value\" class=\"pu-select d-win\" dir=\"ltr\" lang=\"aa\"><span class=\"s-flag-d\" title=\"Losing items may be flagged for CLDR Committee review.\">&nbsp; &nbsp;</span><div class=\"d-item\"><div class=\"choice-field\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"v4oaR4oaR4oaR__xauhj\" class=\"ichoice-x\" type=\"radio\" title=\"click to vote\" value=\"↑↑↑\"></label><span class=\"subSpan\"><span class=\"fallback\" dir=\"ltr\" lang=\"aa\">latn</span></span><div class=\"i-star\" title=\"This mark shows on the item which was approved in the last release, if any.\"></div></div><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"aa\"><div class=\"cldr_example\">2345</div></div></div></td>\n"
-			+ "			<td id=\"addcell\" title=\"Add another value\" class=\"d-win\"><form class=\"form-inline\"><div class=\"button-add form-group\"><button class=\"btn btn-primary\" title=\"\" type=\"submit\" data-original-title=\"Add\"><span class=\"glyphicon glyphicon-plus\"></span></button></div></form></td>\n"
-			+ "			<td id=\"othercell\" title=\"Other non-winning items\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"></td>\n"
-			+ "		</tr><tr id=\"r@602dd39f06ddeb32\" class=\"vother cov40\">\n"
-			+ "			<td id=\"codecell\" class=\"d-code\" title=\"Code for this item\"><span>native</span></td>\n"
-			+ "			<td id=\"comparisoncell\" title=\"Comparison value\" class=\"d-disp\" dir=\"ltr\" lang=\"en-ZZ\"><span class=\"subSpan\">latn</span><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"en-ZZ\"><div class=\"cldr_example\">2345</div></div><div class=\"infos-code\"><img src=\"example.png\" alt=\"Example\"></div></td>\n"
-			+ "			<td id=\"nocell\" title=\"undefined\" class=\"d-no-vo-false\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"NO__xgorkb\" class=\"ichoice-x\" type=\"radio\" title=\"click to vote\" value=\"\"></label></td>\n"
-			+ "			<td style=\"display: none\" id=\"votedcell\" class=\"d-vo\" title=\"Shows a checkmark if you voted\"></td>\n"
-			+ "			<td id=\"statuscell\" class=\"d-dr-missing d-dr-status\" title=\"Status: Missing\"></td>\n"
-			+ "			<td style=\"display: none\" id=\"errcell\" class=\"d-st-okay\" title=\"Status Icon\"></td>\n"
-			+ "			<td id=\"proposedcell\" title=\"Winning value\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"><span class=\"s-flag-d\" title=\"Losing items may be flagged for CLDR Committee review.\">&nbsp; &nbsp;</span><div class=\"d-item\"><div class=\"choice-field\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"v4oaR4oaR4oaR__xgorkb\" class=\"ichoice-o\" type=\"radio\" title=\"click to vote\" value=\"↑↑↑\"></label><span class=\"subSpan\"><span class=\"fallback\" dir=\"ltr\" lang=\"aa\">latn</span></span><div class=\"i-star\" title=\"This mark shows on the item which was approved in the last release, if any.\"></div></div><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"aa\"><div class=\"cldr_example\">2345</div></div></div></td>\n"
-			+ "			<td id=\"addcell\" title=\"Add another value\" class=\"d-win\"><form class=\"form-inline\"><div class=\"button-add form-group\"><button class=\"btn btn-primary\" title=\"\" type=\"submit\" data-original-title=\"Add\"><span class=\"glyphicon glyphicon-plus\"></span></button></div></form></td>\n"
-			+ "			<td id=\"othercell\" title=\"Other non-winning items\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"></td>\n"
-			+ "		</tr></tbody>\n" + "</table>";
+		tableHtml = tableHtml.replace(" hideCov80", ""); // present or absent at random?
+		tableHtml = tableHtml.replace(" hideCov100", ""); // present or absent at random?
 
-	static private String table2 = "<table id=\"vetting-table\" class=\"data table table-bordered vetting-page\">\n"
-			+ "<thead>\n" + "<tr class=\"headingb active\">\n" + "<!--  see stui.js for the following -->\n"
-			+ "    <th title=\"Code for this item\" id=\"null\">Code</th>\n"
-			+ "	<th title=\"Comparison value\" id=\"null\">English</th>\n"
-			+ "	<th title=\"Abstain from voting on this item\" id=\"null\" class=\"d-no\">Abstain</th>\n"
-			+ "	<th title=\"Shows a checkmark if you voted\" id=\"null\" style=\"display: none\">Voting</th>\n"
-			+ "	<th title=\"Approval Status\" id=\"null\" class=\"d-status\">A</th>\n"
-			+ "	<th title=\"Status Icon\" id=\"null\" style=\"display: none\">Errors</th>\n"
-			+ "	<th title=\"Winning value\" id=\"null\">Winning</th>\n"
-			+ "	<th title=\"Add another value\" id=\"null\">Add</th><th title=\"Other non-winning items\" id=\"null\">Others</th>\n"
-			+ "<!--	<th title=\"$flyoverchange\" id='stui-htmlchange' class='d-change'></th>-->\n" + "</tr>\n"
-			+ "</thead>\n" + "<tbody><tr id=\"null\" class=\"undefined cov40\">\n"
-			+ "	<th class=\"partsection\" colspan=\"9\">\n" + "		<a id=\"Numbering System\">Numbering System</a>\n"
-			+ "	</th>\n" + "</tr><tr id=\"r@7b8ee7884f773afa\" class=\"vother cov40\">\n"
-			+ "			<td id=\"codecell\" class=\"d-code\" title=\"Code for this item\"><span>default</span></td>\n"
-			+ "			<td id=\"comparisoncell\" title=\"Comparison value\" class=\"d-disp\" dir=\"ltr\" lang=\"en-ZZ\"><span class=\"subSpan\">latn</span><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"en-ZZ\"><div class=\"cldr_example\">2345</div></div><div class=\"infos-code\"><img src=\"example.png\" alt=\"Example\"></div></td>\n"
-			+ "			<td id=\"nocell\" title=\"undefined\" class=\"d-no-vo-true\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"NO__xauhj\" class=\"ichoice-o\" type=\"radio\" title=\"click to vote\" value=\"\"></label></td>\n"
-			+ "			<td style=\"display: none\" id=\"votedcell\" class=\"d-vo\" title=\"Shows a checkmark if you voted\"></td>\n"
-			+ "			<td id=\"statuscell\" class=\"d-dr-approved d-dr-status\" title=\"Status: Approved\"></td>\n"
-			+ "			<td style=\"display: none\" id=\"errcell\" class=\"d-st-okay\" title=\"Status Icon\"></td>\n"
-			+ "			<td id=\"proposedcell\" title=\"Winning value\" class=\"pu-select d-win\" dir=\"ltr\" lang=\"aa\"><span class=\"s-flag-d\" title=\"Losing items may be flagged for CLDR Committee review.\">&nbsp; &nbsp;</span><div class=\"d-item\"><div class=\"choice-field\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"vdGFtbA,,__xauhj\" class=\"ichoice-x\" type=\"radio\" title=\"click to vote\" value=\"taml\"></label><span class=\"subSpan\"><span class=\"winner\" dir=\"ltr\" lang=\"aa\">taml</span></span></div><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"aa\"><div class=\"cldr_example\">௨௲௩௱௪௰௫</div></div></div></td>\n"
-			+ "			<td id=\"addcell\" title=\"Add another value\" class=\"d-win\"><form class=\"form-inline\"><div class=\"button-add form-group\"><button class=\"btn btn-primary\" title=\"\" type=\"submit\" data-original-title=\"Add\"><span class=\"glyphicon glyphicon-plus\"></span></button></div></form></td>\n"
-			+ "			<td id=\"othercell\" title=\"Other non-winning items\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"><div class=\"d-item\"><div class=\"choice-field\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"v4oaR4oaR4oaR__xauhj\" class=\"ichoice-o\" type=\"radio\" title=\"click to vote\" value=\"↑↑↑\"></label><span class=\"subSpan\"><span class=\"fallback\" dir=\"ltr\" lang=\"aa\">latn</span></span><div class=\"i-star\" title=\"This mark shows on the item which was approved in the last release, if any.\"></div></div><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"aa\"><div class=\"cldr_example\">2345</div></div></div><hr></td>\n"
-			+ "		</tr><tr id=\"r@602dd39f06ddeb32\" class=\"vother cov40\">\n"
-			+ "			<td id=\"codecell\" class=\"d-code\" title=\"Code for this item\"><span>native</span></td>\n"
-			+ "			<td id=\"comparisoncell\" title=\"Comparison value\" class=\"d-disp\" dir=\"ltr\" lang=\"en-ZZ\"><span class=\"subSpan\">latn</span><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"en-ZZ\"><div class=\"cldr_example\">2345</div></div><div class=\"infos-code\"><img src=\"example.png\" alt=\"Example\"></div></td>\n"
-			+ "			<td id=\"nocell\" title=\"undefined\" class=\"d-no-vo-false\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"NO__xgorkb\" class=\"ichoice-x\" type=\"radio\" title=\"click to vote\" value=\"\"></label></td>\n"
-			+ "			<td style=\"display: none\" id=\"votedcell\" class=\"d-vo\" title=\"Shows a checkmark if you voted\"></td>\n"
-			+ "			<td id=\"statuscell\" class=\"d-dr-missing d-dr-status\" title=\"Status: Missing\"></td>\n"
-			+ "			<td style=\"display: none\" id=\"errcell\" class=\"d-st-okay\" title=\"Status Icon\"></td>\n"
-			+ "			<td id=\"proposedcell\" title=\"Winning value\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"><span class=\"s-flag-d\" title=\"Losing items may be flagged for CLDR Committee review.\">&nbsp; &nbsp;</span><div class=\"d-item\"><div class=\"choice-field\"><label title=\"\" class=\"btn btn-default\" data-original-title=\"Vote\"><input id=\"v4oaR4oaR4oaR__xgorkb\" class=\"ichoice-o\" type=\"radio\" title=\"click to vote\" value=\"↑↑↑\"></label><span class=\"subSpan\"><span class=\"fallback\" dir=\"ltr\" lang=\"aa\">latn</span></span><div class=\"i-star\" title=\"This mark shows on the item which was approved in the last release, if any.\"></div></div><div class=\"d-example well well-sm\" dir=\"ltr\" lang=\"aa\"><div class=\"cldr_example\">2345</div></div></div></td>\n"
-			+ "			<td id=\"addcell\" title=\"Add another value\" class=\"d-win\"><form class=\"form-inline\"><div class=\"button-add form-group\"><button class=\"btn btn-primary\" title=\"\" type=\"submit\" data-original-title=\"Add\"><span class=\"glyphicon glyphicon-plus\"></span></button></div></form></td>\n"
-			+ "			<td id=\"othercell\" title=\"Other non-winning items\" class=\"d-win\" dir=\"ltr\" lang=\"aa\"></td>\n"
-			+ "		</tr></tbody>\n" + "</table>";
+		return tableHtml.trim();
+	}
 }
