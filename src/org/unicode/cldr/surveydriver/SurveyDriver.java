@@ -10,8 +10,10 @@ import java.util.regex.Pattern;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -57,6 +59,15 @@ import com.google.gson.Gson;
  * and add it to Eclipse as follows: Right-click on "survey-driver" and select Properties.
  * Click on "Java Build Path". Click on the Libraries tab. Click on "Add External JARs".
  * Navigate to cldr/tools/java/libs and select gson.jar.
+ *
+ * Setting up may require adding a specific set of test users to the db, consistent
+ * with getNodeLoginQuery:
+ *
+ *     mysql cldrdb < scripts/cldr-add-webdrivers.sql
+ *
+ * and starting selenium grid:
+ *
+ *     sh scripts/selenium-grid-start.sh
  */
 public class SurveyDriver {
 	/*
@@ -81,9 +92,11 @@ public class SurveyDriver {
 	 * the WebDriver interface). Otherwise the driver could be a ChromeDriver, or FirefoxDriver, EdgeDriver,
 	 * or SafariDriver (all subclasses of RemoteWebDriver) if we add options for those.
 	 * While much of the code in this class works either way, Selenium Grid needs the driver to be a
-	 * RemoteWebDriver and requires installation of a hub and one or more nodes.
+	 * RemoteWebDriver and requires installation of a hub and one or more nodes, which can be done by
 	 *
-	 * Sample commands to start the grid (first node is default port 5555, second node explicit port 5556):
+	 *     sh scripts/selenium-grid-start.sh
+	 *
+	 * It contains commands of these types (first node is default port 5555, second node explicit port 5556):
 	 *
 	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role hub
 	 * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role node
@@ -230,6 +243,7 @@ public class SurveyDriver {
 		 * This loop to 1000 isn't set in stone.
 		 */
 		for (int i = 0; i < 1000; i++) {
+			System.out.println("testFastVoting i = " + i);
 			try {
 				if (!testFastVotingInner(page, url)) {
 					return false;
@@ -405,29 +419,35 @@ public class SurveyDriver {
 					return false;
 				}
 				if (doAdd) {
-					/*
-					 * Problem here: waitInputBoxAppears can get StaleElementReferenceException five times,
-					 * must be for rowEl which isn't re-gotten. For now at least, just continue loop if
-					 * waitInputBoxAppears returns null.
-					 */
-					WebElement inputEl = waitInputBoxAppears(rowEl, url);
-					if (inputEl == null) {
-						System.out.println("Warning: continuing, didn't see input box for " + url);
+					try {
+						/*
+						 * Problem here: waitInputBoxAppears can get StaleElementReferenceException five times,
+						 * must be for rowEl which isn't re-gotten. For now at least, just continue loop if
+						 * waitInputBoxAppears returns null.
+						 */
+						WebElement inputEl = waitInputBoxAppears(rowEl, url);
+						if (inputEl == null) {
+							System.out.println("Warning: continuing, didn't see input box for " + url);
+							continue;
+							// System.out.println("❌ Fast vote test failed, didn't see input box for " + url);
+							// return false;
+						}
+						inputEl = waitUntilRowCellTagElementClickable(inputEl, rowId, cellId, "input", url);
+						if (inputEl == null) {
+							System.out.println("Warning: continuing, input box not clickable for " + url);
+							continue;
+							// System.out.println("❌ Fast vote test failed, input box not clickable for " + url);
+							// return false;
+						}
+						inputEl.clear();
+						inputEl.click();
+						inputEl.sendKeys("Testxyz");
+						inputEl.sendKeys(Keys.RETURN);
+					} catch (WebDriverException e) {
+						System.out.println(
+								"Continuing after WebDriverException for doAdd for row " + rowId + " for " + url);
 						continue;
-						// System.out.println("❌ Fast vote test failed, didn't see input box for " + url);
-						// return false;
 					}
-					inputEl = waitUntilRowCellTagElementClickable(inputEl, rowId, cellId, "input", url);
-					if (inputEl == null) {
-						System.out.println("Warning: continuing, input box not clickable for " + url);
-						continue;
-						// System.out.println("❌ Fast vote test failed, input box not clickable for " + url);
-						// return false;
-					}
-					inputEl.clear();
-					inputEl.click();
-					inputEl.sendKeys("Testxyz");
-					inputEl.sendKeys(Keys.RETURN);
 				}
 			}
 		}
@@ -481,18 +501,8 @@ public class SurveyDriver {
 	 * we're running on. It could also depend on BASE_URL if we're running on SmokeTest rather than
 	 * localhost.
 	 *
-	 * Currently this set of users depends on manual creation on localhost or SmokeTest. For convenience
-	 * we might eventually want a way to create a set of users programmatically.
-	 *
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'SundayDriver_TESTER_', 'sundaydriver.ta9emn2f.@czca.bangladesh.example.com', 'Bangladesh Computer Council', 'ME0BtTx7J');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'MondayDriver_TESTER_', 'mondaydriver.fvuisg2in@sisi.sil.example.com', 'SIL', 'OjATx0fTt');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'TuesdayDriver_TESTER_', 'tuesdaydriver.smw4grsg0@ork0.netflix.example.com', 'Netflix', 'QEuNcNCvi');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'WednesdayDriver_TESTER_', 'wednesdaydriver.kesjczv8q@8sye.afghan-csa.example.com', 'Afghan_csa', 'MjpHbYuJY');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'ThursdayDriver_TESTER_', 'thursdaydriver.klxizrpyc@p9mn.welsh-lc.example.com', 'Welsh LC', 'cMkLuCab1');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'FridayDriver_TESTER_', 'fridaydriver.kclabyoxi@fgkg.mozilla.example.com', 'Mozilla', 'qSR.KZ57V');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'SaturdayDriver_TESTER_', 'saturdaydriver.oelbvfn0x@smiz.cherokee.example.com', 'Cherokee', 'r3Lim3OFL');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'BackseatDriver_TESTER_', 'backseatdriver.cogihy42h@jqs9.india.example.com', 'India', 'LenA3VJSK');
-	insert into cldr_users(userlevel, name, email, org, password) values(1, 'StudentDriver_TESTER_', 'studentdriver.h.ze76.2p@nd3e.government of pakistan - national language authority.example.com', 'Government of Pakistan - National Language Authority', 'S5fpuRqHW');
+	 * Currently this set of users depends on running a mysql script on localhost or SmokeTest.
+	 * See scripts/cldr-add-webdrivers.sql, usage "mysql cldrdb < scripts/cldr-add-webdrivers.sql".
 	 *
 	 * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales,
 	 * so an easy way is to make them all TC or admin.
@@ -881,6 +891,14 @@ public class SurveyDriver {
 					break;
 				}
 				System.out.println("waitUntilRowCellTagElementClickable repeating for StaleElementReferenceException");
+				WebElement rowEl = driver.findElement(By.id(rowId));
+				WebElement columnEl = rowEl.findElement(By.id(cellId));
+				clickEl = columnEl.findElement(By.tagName(tagName));
+			} catch (NoSuchElementException e) {
+				if (++repeats > 4) {
+					break;
+				}
+				System.out.println("waitUntilRowCellTagElementClickable repeating for NoSuchElementException");
 				WebElement rowEl = driver.findElement(By.id(rowId));
 				WebElement columnEl = rowEl.findElement(By.id(cellId));
 				clickEl = columnEl.findElement(By.tagName(tagName));

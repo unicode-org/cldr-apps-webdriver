@@ -1,6 +1,7 @@
 package org.unicode.cldr.surveydriver;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
@@ -42,6 +43,10 @@ public class SurveyDriverVettingTable {
 		if (!s.waitUntilElementInactive("overlay", url)) {
 			return false;
 		}
+
+		JavascriptExecutor js = (JavascriptExecutor) driver;
+		js.executeScript(
+				"window.testTable = function(theTable, reuseTable) { console.log(theTable.json); }");
 
 		/*
 		 * Get the table three times.
