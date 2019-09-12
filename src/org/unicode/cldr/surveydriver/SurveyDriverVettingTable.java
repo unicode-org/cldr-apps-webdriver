@@ -121,7 +121,7 @@ public class SurveyDriverVettingTable {
 			 * from the server before it can update the display to show the results of a
 			 * completed voting operation.
 			 */
-			if (!s.waitUntilClassChecking(false, url)) {
+			if (!s.waitUntilClassExists("tr_checking2", false, url)) {
 				return false;
 			}
 			String tableHtml = normalizeTable(tableEl.getAttribute("outerHTML"));

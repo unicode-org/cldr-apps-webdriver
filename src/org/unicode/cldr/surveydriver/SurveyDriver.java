@@ -63,20 +63,21 @@ import com.google.gson.Gson;
  * Setting up may require adding a specific set of test users to the db, consistent
  * with getNodeLoginQuery:
  *
- *     mysql cldrdb < scripts/cldr-add-webdrivers.sql
+ *     mysql cldrdb < survey-driver/scripts/cldr-add-webdrivers.sql
  *
  * and starting selenium grid:
  *
- *     sh scripts/selenium-grid-start.sh
+ *     sh survey-driver/scripts/selenium-grid-start.sh
  */
 public class SurveyDriver {
 	/*
 	 * Enable/disable specific tests using these booleans
 	 */
-	static final boolean TEST_VETTING_TABLE = true;
+	static final boolean TEST_VETTING_TABLE = false;
 	static final boolean TEST_FAST_VOTING = false;
 	static final boolean TEST_LOCALES_AND_PAGES = false;
 	static final boolean TEST_ANNOTATION_VOTING = false;
+	static final boolean TEST_XML_UPLOADER = true;
 
 	/*
 	 * Configure for Survey Tool server, which can be localhost, SmokeTest, or other
@@ -125,6 +126,9 @@ public class SurveyDriver {
 		}
 		if (TEST_ANNOTATION_VOTING) {
 			s.testAnnotationVoting();
+		}
+		if (TEST_XML_UPLOADER) {
+			new SurveyDriverXMLUploader(s).testXMLUploader();
 		}
 		s.tearDown();
 	}
@@ -457,7 +461,7 @@ public class SurveyDriver {
 		 * and then the tr_checking2 element(s) are already gone before we get here.
 		 * For now, skip this call.
 		 */
-		if (false && !waitUntilClassChecking(true, url)) {
+		if (false && !waitUntilClassExists("tr_checking2", true, url)) {
 			return false;
 		}
 		/*
@@ -466,7 +470,7 @@ public class SurveyDriver {
 		 * from the server before it can update the display to show the results of a
 		 * completed voting operation.
 		 */
-		if (!waitUntilClassChecking(false, url)) {
+		if (!waitUntilClassExists("tr_checking2", false, url)) {
 			return false;
 		}
 		double deltaTime = System.currentTimeMillis() - firstClickTime;
@@ -493,6 +497,13 @@ public class SurveyDriver {
 		if (!waitUntilLoadingMessageDone(url)) {
 			return false;
 		}
+		/*
+		 * To make sure we're really logged in, find an element with class "glyphicon-log-out".
+		 */
+		if (!waitUntilClassExists("glyphicon-log-out", true, url)) {
+			System.out.println("❌ Login failed, log-out icon never appeared in " + url);
+			return false;
+		}
 		return true;
 	}
 
@@ -502,7 +513,7 @@ public class SurveyDriver {
 	 * localhost.
 	 *
 	 * Currently this set of users depends on running a mysql script on localhost or SmokeTest.
-	 * See scripts/cldr-add-webdrivers.sql, usage "mysql cldrdb < scripts/cldr-add-webdrivers.sql".
+	 * See scripts/cldr-add-webdrivers.sql, usage "mysql cldrdb < survey-driver/scripts/cldr-add-webdrivers.sql".
 	 *
 	 * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales,
 	 * so an easy way is to make them all TC or admin.
@@ -785,7 +796,31 @@ public class SurveyDriver {
 	}
 
 	/**
-	 * Wait for the element with given id not to have class "active".
+	 * Wait for the element with given id to have class "active".
+	 *
+	 * @param id the id of the element
+	 * @param url the url we're loading
+	 * @return true for success, false for failure
+	 */
+	public boolean waitUntilElementActive(String id, String url) {
+		try {
+			wait.until(new ExpectedCondition<Boolean>() {
+				@Override
+				public Boolean apply(WebDriver webDriver) {
+					WebElement el = webDriver.findElement(By.id(id));
+					return el != null && el.getAttribute("class").contains("active");
+				}
+			});
+		} catch (Exception e) {
+			System.out.println(e);
+			System.out.println("❌ Test failed, maybe timed out, waiting for " + id + " in " + url);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Wait for the element with given id NOT to have class "active".
 	 *
 	 * @param id the id of the element
 	 * @param url the url we're loading
@@ -857,7 +892,7 @@ public class SurveyDriver {
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	private boolean waitUntilElementClickable(WebElement el, String url) {
+	public boolean waitUntilElementClickable(WebElement el, String url) {
 		try {
 			wait.until(ExpectedConditions.elementToBeClickable(el));
 		} catch (Exception e) {
@@ -959,14 +994,14 @@ public class SurveyDriver {
 	}
 
 	/**
-	 * Wait until an element with class "tr_checking2" exists, or wait until one doesn't.
+	 * Wait until an element with class with the given name exists, or wait until one doesn't.
 	 *
+	 * @param className the class name
 	 * @param checking true to wait until such an element exists, or false to wait until no such element exists
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	public boolean waitUntilClassChecking(boolean checking, String url) {
-		String className = "tr_checking2";
+	public boolean waitUntilClassExists(String className, boolean checking, String url) {
 		try {
 			wait.until(new ExpectedCondition<Boolean>() {
 				@Override
@@ -981,6 +1016,32 @@ public class SurveyDriver {
 			System.out.println(e);
 			System.out.println("❌ Test failed, maybe timed out, waiting for class " + className
 					+ (checking ? "" : " not") + " to exist for " + url);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Wait until an element with id with the given name exists, or wait until one doesn't.
+	 *
+	 * @param idName the id name
+	 * @param checking true to wait until such an element exists, or false to wait until no such element exists
+	 * @param url the url we're loading
+	 * @return true for success, false for failure
+	 */
+	public boolean waitUntilIdExists(String idName, boolean checking, String url) {
+		try {
+			wait.until(new ExpectedCondition<Boolean>() {
+				@Override
+				public Boolean apply(WebDriver webDriver) {
+					int elCount = webDriver.findElements(By.id(idName)).size();
+					return checking ? (elCount > 0) : (elCount == 0);
+				}
+			});
+		} catch (Exception e) {
+			System.out.println(e);
+			System.out.println("❌ Test failed, maybe timed out, waiting for id " + idName + (checking ? "" : " not")
+					+ " to exist for " + url);
 			return false;
 		}
 		return true;
