@@ -47,7 +47,7 @@ import com.google.gson.Gson;
  *
  * A tutorial for setting up a project using Selenium in Eclipse:
  *   https://www.guru99.com/selenium-tutorial.html
- * 
+ *
  * The Selenium jar files must be added to the Eclipse project. Download from
  * https://www.seleniumhq.org/download/ and unzip to get a folder like selenium-java-3.141.59.
  * In Eclipse, right-click on "survey-driver" and select Properties. Click on "Java Build Path".
@@ -67,7 +67,7 @@ import com.google.gson.Gson;
  *
  * and starting selenium grid:
  *
- *     sh survey-driver/scripts/selenium-grid-start.sh
+ *     sh survey-driver/scripts/selenium-grid-start.sh &
  */
 public class SurveyDriver {
 	/*
@@ -75,9 +75,9 @@ public class SurveyDriver {
 	 */
 	static final boolean TEST_VETTING_TABLE = false;
 	static final boolean TEST_FAST_VOTING = false;
-	static final boolean TEST_LOCALES_AND_PAGES = false;
+	static final boolean TEST_LOCALES_AND_PAGES = true;
 	static final boolean TEST_ANNOTATION_VOTING = false;
-	static final boolean TEST_XML_UPLOADER = true;
+	static final boolean TEST_XML_UPLOADER = false;
 
 	/*
 	 * Configure for Survey Tool server, which can be localhost, SmokeTest, or other
@@ -233,7 +233,7 @@ public class SurveyDriver {
 		}
 		/*
 		 * TODO: configure the locale and page on a per-node basis, to enable multiple simulated
-		 * users to be voting in multiple locales and/or pages. 
+		 * users to be voting in multiple locales and/or pages.
 		 */
 		String loc = "sr";
 		// String loc = "ar";
@@ -642,6 +642,16 @@ public class SurveyDriver {
 		}
 		System.out.println(
 				"✅ Test passed: zero occurrences in log of \'" + searchString + "\' for " + loc + ", " + page);
+
+		WebElement el = null;
+		try {
+			el = driver.findElement(By.id("r@44fca52aa81abcb2"));
+		} catch (Exception e) {
+
+		}
+		if (el != null) {
+			System.out.println("✅✅✅ Got it in " + url);
+		}
 		return true;
 	}
 
@@ -863,7 +873,7 @@ public class SurveyDriver {
 			try {
 				WebElement addCell = rowEl.findElement(By.id("addcell"));
 				inputEl = wait.until(ExpectedConditions.presenceOfNestedElementLocatedBy(addCell, By.tagName("input")));
-				/* 
+				/*
 				 * TODO: don't wait here for 30 seconds, as sometimes happens...
 				 */
 			} catch (StaleElementReferenceException e) {
