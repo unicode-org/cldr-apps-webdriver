@@ -35,8 +35,8 @@ import com.google.gson.Gson;
  * Reference: https://unicode.org/cldr/trac/ticket/11488
  *   "Implement new Survey Tool automated test framework and infrastructure"
  *
- * This test has been used with the survey-driver project running in Eclipse. At the same time,
- * cldr-apps can be running either on localhost (in the same Eclipse as survey-driver) or on SmokeTest.
+ * This test has been used with the cldr-apps-webdriver project running in Eclipse. At the same time,
+ * cldr-apps can be running either on localhost (in the same Eclipse as cldr-apps-webdriver) or on SmokeTest.
  *
  * This code requires installing an implementation of WebDriver, such as chromedriver for Chrome.
  * On macOS, chromedriver can be installed from Terminal with brew as follows:
@@ -50,32 +50,32 @@ import com.google.gson.Gson;
  *
  * The Selenium jar files must be added to the Eclipse project. Download from
  * https://www.seleniumhq.org/download/ and unzip to get a folder like selenium-java-3.141.59.
- * In Eclipse, right-click on "survey-driver" and select Properties. Click on "Java Build Path".
+ * In Eclipse, right-click on "cldr-apps-webdriver" and select Properties. Click on "Java Build Path".
  * Click on the Libraries tab. Click on "Add External JARs". Navigate to the selenium folder and
  * add all the jar files outside the "lib" folder. Click on "Add External JARs" again and add all
  * the jar files inside "lib".
  *
  * For Gson, CLDR already includes cldr/tools/java/libs/gson.jar. Take advantage of that
- * and add it to Eclipse as follows: Right-click on "survey-driver" and select Properties.
+ * and add it to Eclipse as follows: Right-click on "cldr-apps-webdriver" and select Properties.
  * Click on "Java Build Path". Click on the Libraries tab. Click on "Add External JARs".
  * Navigate to cldr/tools/java/libs and select gson.jar.
  *
  * Setting up may require adding a specific set of test users to the db, consistent
  * with getNodeLoginQuery:
  *
- *     mysql cldrdb < survey-driver/scripts/cldr-add-webdrivers.sql
+ *     mysql cldrdb < cldr-apps-webdriver/scripts/cldr-add-webdrivers.sql
  *
  * and starting selenium grid:
  *
- *     sh survey-driver/scripts/selenium-grid-start.sh &
+ *     sh cldr-apps-webdriver/scripts/selenium-grid-start.sh &
  */
 public class SurveyDriver {
 	/*
 	 * Enable/disable specific tests using these booleans
 	 */
 	static final boolean TEST_VETTING_TABLE = false;
-	static final boolean TEST_FAST_VOTING = false;
-	static final boolean TEST_LOCALES_AND_PAGES = true;
+	static final boolean TEST_FAST_VOTING = true;
+	static final boolean TEST_LOCALES_AND_PAGES = false;
 	static final boolean TEST_ANNOTATION_VOTING = false;
 	static final boolean TEST_XML_UPLOADER = false;
 
@@ -197,7 +197,7 @@ public class SurveyDriver {
 	 * Clean up when finished testing.
 	 */
 	private void tearDown() {
-		System.out.println("survey-driver is quitting, goodbye from node on port " + nodePort);
+		System.out.println("cldr-apps-webdriver is quitting, goodbye from node on port " + nodePort);
 		if (driver != null) {
 			/*
 			 * This five-second sleep may not always be appropriate. It can help to see the browser for a few seconds
@@ -321,14 +321,14 @@ public class SurveyDriver {
 		 * Acoli appears to be a new addition.
 		 */
 		String[] rowIds = { "f3d4397b739b287", "6899b21f19eef8cc", "1660459cc74c9aec", "7d1d3cbd260601a4" };
-		String[] cellIds = { "nocell", "proposedcell" };
+		String[] cellClasses = { "nocell", "proposedcell" };
 		final Boolean verbose = true;
-		for (String cell : cellIds) {
+		for (String cell : cellClasses) {
 			for (int i = 0; i < rowIds.length; i++) {
 				String rowId = "r@" + rowIds[i];
 				boolean doAdd = (i == rowIds.length - 1) && cell.equals("proposedcell");
 				String tagName = doAdd ? "button" : "input";
-				String cellId = doAdd ? "addcell" : cell;
+				String cellClass = doAdd ? "addcell" : cell;
 				WebElement rowEl = null, columnEl = null, clickEl = null;
 				int repeats = 0;
 				if (verbose) {
@@ -355,14 +355,15 @@ public class SurveyDriver {
 						return false;
 					}
 					try {
-						columnEl = rowEl.findElement(By.id(cellId));
+						columnEl = rowEl.findElement(By.className(cellClass));
 					} catch (StaleElementReferenceException e) {
 						if (++repeats > 4) {
 							break;
 						}
 						System.out
-								.println("Continuing after StaleElementReferenceException for findElement by id cellId "
-										+ cellId + " for " + url);
+								.println(
+										"Continuing after StaleElementReferenceException for findElement by class cellClass "
+												+ cellClass + " for " + url);
 						continue;
 					} catch (Exception e) {
 						System.out.println(e);
@@ -370,7 +371,8 @@ public class SurveyDriver {
 					}
 					if (columnEl == null) {
 						System.out.println(
-								"❌ Fast vote test failed, no column " + cellId + " for row " + rowId + " for " + url);
+								"❌ Fast vote test failed, no column " + cellClass + " for row " + rowId + " for "
+										+ url);
 						return false;
 					}
 					try {
@@ -393,7 +395,7 @@ public class SurveyDriver {
 							"❌ Fast vote test failed, no tag " + tagName + " for row " + rowId + " for " + url);
 					return false;
 				}
-				clickEl = waitUntilRowCellTagElementClickable(clickEl, rowId, cellId, tagName, url);
+				clickEl = waitUntilRowCellTagElementClickable(clickEl, rowId, cellClass, tagName, url);
 				if (clickEl == null) {
 					return false;
 				}
@@ -409,7 +411,7 @@ public class SurveyDriver {
 					firstClickTime = System.currentTimeMillis();
 				}
 				try {
-					clickOnRowCellTagElement(clickEl, rowId, cellId, tagName, url);
+					clickOnRowCellTagElement(clickEl, rowId, cellClass, tagName, url);
 				} catch (StaleElementReferenceException e) {
 					if (++repeats > 4) {
 						break;
@@ -436,7 +438,7 @@ public class SurveyDriver {
 							// System.out.println("❌ Fast vote test failed, didn't see input box for " + url);
 							// return false;
 						}
-						inputEl = waitUntilRowCellTagElementClickable(inputEl, rowId, cellId, "input", url);
+						inputEl = waitUntilRowCellTagElementClickable(inputEl, rowId, cellClass, "input", url);
 						if (inputEl == null) {
 							System.out.println("Warning: continuing, input box not clickable for " + url);
 							continue;
@@ -513,7 +515,7 @@ public class SurveyDriver {
 	 * localhost.
 	 *
 	 * Currently this set of users depends on running a mysql script on localhost or SmokeTest.
-	 * See scripts/cldr-add-webdrivers.sql, usage "mysql cldrdb < survey-driver/scripts/cldr-add-webdrivers.sql".
+	 * See scripts/cldr-add-webdrivers.sql, usage "mysql cldrdb < cldr-apps-webdriver/scripts/cldr-add-webdrivers.sql".
 	 *
 	 * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales,
 	 * so an easy way is to make them all TC or admin.
@@ -871,7 +873,7 @@ public class SurveyDriver {
 		int repeats = 0;
 		for (;;) {
 			try {
-				WebElement addCell = rowEl.findElement(By.id("addcell"));
+				WebElement addCell = rowEl.findElement(By.className("addcell"));
 				inputEl = wait.until(ExpectedConditions.presenceOfNestedElementLocatedBy(addCell, By.tagName("input")));
 				/*
 				 * TODO: don't wait here for 30 seconds, as sometimes happens...
@@ -914,18 +916,17 @@ public class SurveyDriver {
 	}
 
 	/**
-	 * Wait until the element specified by rowId, cellId, tagName is clickable.
+	 * Wait until the element specified by rowId, cellClass, tagName is clickable.
 	 *
 	 * @param clickEl
 	 * @param rowId
-	 * @param cellId
+	 * @param cellClass
 	 * @param tagName
 	 * @param url the url we're loading
 	 * @return the (possibly updated) clickEl for success, null for failure
 	 */
-	public WebElement waitUntilRowCellTagElementClickable(WebElement clickEl, String rowId, String cellId,
-			String tagName,
-			String url) {
+	public WebElement waitUntilRowCellTagElementClickable(WebElement clickEl, String rowId, String cellClass,
+			String tagName, String url) {
 		int repeats = 0;
 		for (;;) {
 			try {
@@ -937,7 +938,7 @@ public class SurveyDriver {
 				}
 				System.out.println("waitUntilRowCellTagElementClickable repeating for StaleElementReferenceException");
 				WebElement rowEl = driver.findElement(By.id(rowId));
-				WebElement columnEl = rowEl.findElement(By.id(cellId));
+				WebElement columnEl = rowEl.findElement(By.className(cellClass));
 				clickEl = columnEl.findElement(By.tagName(tagName));
 			} catch (NoSuchElementException e) {
 				if (++repeats > 4) {
@@ -945,7 +946,7 @@ public class SurveyDriver {
 				}
 				System.out.println("waitUntilRowCellTagElementClickable repeating for NoSuchElementException");
 				WebElement rowEl = driver.findElement(By.id(rowId));
-				WebElement columnEl = rowEl.findElement(By.id(cellId));
+				WebElement columnEl = rowEl.findElement(By.className(cellClass));
 				clickEl = columnEl.findElement(By.tagName(tagName));
 			} catch (Exception e) {
 				/*
@@ -960,22 +961,22 @@ public class SurveyDriver {
 			}
 		}
 		System.out.println(
-				"❌ Test failed in waitUntilRowCellTagElementClickable for " + rowId + "," + cellId + "," + tagName
+				"❌ Test failed in waitUntilRowCellTagElementClickable for " + rowId + "," + cellClass + "," + tagName
 						+ " in " + url);
 		return null;
 	}
 
 	/**
-	 * Click on the element specified by rowId, cellId, tagName.
+	 * Click on the element specified by rowId, cellClass, tagName.
 	 *
 	 * @param clickEl
 	 * @param rowId
-	 * @param cellId
+	 * @param cellClass
 	 * @param tagName
 	 * @param url the url we're loading
 	 * @return true for success, false for failure
 	 */
-	public boolean clickOnRowCellTagElement(WebElement clickEl, String rowId, String cellId, String tagName,
+	public boolean clickOnRowCellTagElement(WebElement clickEl, String rowId, String cellClass, String tagName,
 			String url) {
 		int repeats = 0;
 		for (;;) {
@@ -987,11 +988,11 @@ public class SurveyDriver {
 					break;
 				}
 				System.out.println("clickOnRowCellTagElement repeating for StaleElementReferenceException for " + rowId
-						+ "," + cellId + "," + tagName + " in " + url);
+						+ "," + cellClass + "," + tagName + " in " + url);
 				int recreateStringCount = countLogEntriesContainingString("insertRows: recreating table from scratch");
 				System.out.println("clickOnRowCellTagElement: log has " + recreateStringCount + " scratch messages");
 				WebElement rowEl = driver.findElement(By.id(rowId));
-				WebElement columnEl = rowEl.findElement(By.id(cellId));
+				WebElement columnEl = rowEl.findElement(By.className(cellClass));
 				clickEl = columnEl.findElement(By.tagName(tagName));
 			} catch (Exception e) {
 				System.out.println(e);
@@ -999,7 +1000,8 @@ public class SurveyDriver {
 			}
 		}
 		System.out.println(
-				"❗ Test failed in clickOnRowCellTagElement for " + rowId + "," + cellId + "," + tagName + " in " + url);
+				"❗ Test failed in clickOnRowCellTagElement for " + rowId + "," + cellClass + "," + tagName + " in "
+						+ url);
 		return false;
 	}
 
