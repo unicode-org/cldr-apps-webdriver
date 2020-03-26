@@ -1,3 +1,5 @@
+-- Add Survey Tool users to the database, needed for running SurveyDriver. It must be consistent with SurveyDriver.getNodeLoginQuery.
+-- Usage: mysql cldrdb < scripts/cldr-add-webdrivers.sql
 insert into cldr_users(userlevel, name, email, org, password) values(1, 'SundayDriver_TESTER_', 'sundaydriver.ta9emn2f.@czca.bangladesh.example.com', 'Bangladesh Computer Council', 'ME0BtTx7J');
 insert into cldr_users(userlevel, name, email, org, password) values(1, 'MondayDriver_TESTER_', 'mondaydriver.fvuisg2in@sisi.sil.example.com', 'SIL', 'OjATx0fTt');
 insert into cldr_users(userlevel, name, email, org, password) values(1, 'TuesdayDriver_TESTER_', 'tuesdaydriver.smw4grsg0@ork0.netflix.example.com', 'Netflix', 'QEuNcNCvi');
