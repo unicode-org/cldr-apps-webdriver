@@ -119,6 +119,9 @@ public class SurveyDriver {
 	public static void go() {
 		SurveyDriver s = new SurveyDriver();
 		s.setUp();
+		if (TEST_VETTING_TABLE) {
+			SurveyDriverVettingTable.testVettingTable(s);
+		}
 		if (TEST_FAST_VOTING) {
 			s.testFastVoting();
 		}
@@ -127,6 +130,9 @@ public class SurveyDriver {
 		}
 		if (TEST_ANNOTATION_VOTING) {
 			s.testAnnotationVoting();
+		}
+		if (TEST_XML_UPLOADER) {
+			new SurveyDriverXMLUploader(s).testXMLUploader();
 		}
 		s.tearDown();
 	}
@@ -142,16 +148,6 @@ public class SurveyDriver {
 		options.setCapability("goog:loggingPrefs", logPrefs);
 		// options.addArguments("start-maximized"); // doesn't work
 		// options.addArguments("auto-open-devtools-for-tabs"); // this works, but makes window too narrow
-/* 
-		FirefoxOptions browserOptions = new FirefoxOptions();
-		browserOptions.setPlatformName("Windows 10");
-		browserOptions.setBrowserVersion("92");
-		Map<String, Object> cloudOptions = new HashMap<>();
-		cloudOptions.put("build", myTestBuild);
-		cloudOptions.put("name", myTestName);
-		browserOptions.setCapability("cloud:options", cloudOptions);
-		WebDriver driver = new RemoteWebDriver(new URL(cloudUrl), browserOptions);
-*/
 		if (USE_REMOTE_WEBDRIVER) {
 			try {
 				driver = new RemoteWebDriver(new URL(REMOTE_WEBDRIVER_URL + "/wd/hub"), options);
@@ -601,16 +597,12 @@ public class SurveyDriver {
 	 * Test all the locales and pages we're interested in.
 	 */
 	private void testAllLocalesAndPages() {
-	return;
-	/*
 		String[] locales = SurveyDriverData.getLocales();
 		String[] pages = SurveyDriverData.getPages();
-*/
 		/*
 		 * Reference: https://unicode.org/cldr/trac/ticket/11238 "browser console shows error message,
 		 * there is INHERITANCE_MARKER without inheritedValue"
 		 */
-		/*
 		String searchString = "INHERITANCE_MARKER without inheritedValue"; // formerly, "there is no Bailey Target item"
 
 		for (String loc : locales) {
@@ -621,7 +613,6 @@ public class SurveyDriver {
 				}
 			}
 		}
-		*/
 	}
 
 	/**
