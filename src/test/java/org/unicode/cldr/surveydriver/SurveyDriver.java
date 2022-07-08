@@ -7,6 +7,10 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import java.time.Duration;
+
+import java.time.LocalDateTime;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
@@ -41,7 +45,7 @@ import com.google.gson.Gson;
  * This code requires installing an implementation of WebDriver, such as chromedriver for Chrome.
  * On macOS, chromedriver can be installed from Terminal with brew as follows:
  *   brew tap homebrew/cask
- *   brew cask install chromedriver
+ *   brew install chromedriver
  * -- or download chromedriver from https://chromedriver.storage.googleapis.com
  * (Testing with geckodriver for Firefox has been unsuccessful.)
  *
@@ -82,7 +86,7 @@ public class SurveyDriver {
 	/*
 	 * Configure for Survey Tool server, which can be localhost, SmokeTest, or other
 	 */
-	static final String BASE_URL = "http://localhost:8080/cldr-apps/";
+	static final String BASE_URL = "http://localhost:9080/cldr-apps/";
 	// static final String BASE_URL = "http://cldr-smoke.unicode.org/smoketest/";
 
 	static final long TIME_OUT_SECONDS = 30;
@@ -112,7 +116,7 @@ public class SurveyDriver {
 	private int nodePort = 5555; // default, may be changed
 	private boolean gotComprehensiveCoverage = false;
 
-	public static void main(String[] args) {
+	public static void go() {
 		SurveyDriver s = new SurveyDriver();
 		s.setUp();
 		if (TEST_VETTING_TABLE) {
@@ -141,10 +145,9 @@ public class SurveyDriver {
 		logPrefs.enable(LogType.BROWSER, Level.ALL);
 
 		ChromeOptions options = new ChromeOptions();
-		options.setCapability(CapabilityType.LOGGING_PREFS, logPrefs);
-		options.addArguments("start-maximized"); // doesn't work
+		options.setCapability("goog:loggingPrefs", logPrefs);
+		// options.addArguments("start-maximized"); // doesn't work
 		// options.addArguments("auto-open-devtools-for-tabs"); // this works, but makes window too narrow
-
 		if (USE_REMOTE_WEBDRIVER) {
 			try {
 				driver = new RemoteWebDriver(new URL(REMOTE_WEBDRIVER_URL + "/wd/hub"), options);
@@ -157,7 +160,7 @@ public class SurveyDriver {
 			driver = new ChromeDriver(options);
 			// driver.manage().window().maximize(); // doesn't work
 		}
-		wait = new WebDriverWait(driver, TIME_OUT_SECONDS, SLEEP_MILLISECONDS);
+		wait = new WebDriverWait(driver, Duration.ofSeconds​(TIME_OUT_SECONDS), Duration.ofMillis​(SLEEP_MILLISECONDS));
 		if (USE_REMOTE_WEBDRIVER) {
 			/*
 			 * http://localhost:4444/grid/api/testsession?session=<SessionIdGoesHere>
@@ -500,10 +503,10 @@ public class SurveyDriver {
 			return false;
 		}
 		/*
-		 * To make sure we're really logged in, find an element with class "glyphicon-log-out".
+		 * To make sure we're really logged in, find an element with class "glyphicon-user".
 		 */
-		if (!waitUntilClassExists("glyphicon-log-out", true, url)) {
-			System.out.println("❌ Login failed, log-out icon never appeared in " + url);
+		if (!waitUntilClassExists("glyphicon-user", true, url)) {
+			System.out.println("❌ Login failed, glyphicon-user icon never appeared in " + url);
 			return false;
 		}
 		return true;
@@ -596,7 +599,6 @@ public class SurveyDriver {
 	private void testAllLocalesAndPages() {
 		String[] locales = SurveyDriverData.getLocales();
 		String[] pages = SurveyDriverData.getPages();
-
 		/*
 		 * Reference: https://unicode.org/cldr/trac/ticket/11238 "browser console shows error message,
 		 * there is INHERITANCE_MARKER without inheritedValue"
