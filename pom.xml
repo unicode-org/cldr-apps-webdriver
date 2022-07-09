@@ -4,21 +4,17 @@
   <groupId>org.unicode.cldr.surveydriver</groupId>
   <artifactId>cldr-apps-webdriver</artifactId>
   <version>1.0-SNAPSHOT</version>
-
   <name>cldr-apps-webdriver</name>
-
   <licenses>
     <license>
       <name>Unicode-DFS-2016</name>
     </license>
   </licenses>
-
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
   </properties>
-
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -26,20 +22,17 @@
       <version>4.11</version>
       <scope>test</scope>
     </dependency>
-
     <dependency>
-        <groupId>org.seleniumhq.selenium</groupId>
-        <artifactId>selenium-java</artifactId>
-        <version>4.2.2</version>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>4.2.2</version>
     </dependency>
-
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.9.0</version>
     </dependency>
   </dependencies>
-
   <build>
     <pluginManagement>
       <plugins>
