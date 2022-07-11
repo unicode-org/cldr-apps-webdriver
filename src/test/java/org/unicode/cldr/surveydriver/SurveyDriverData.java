@@ -13,6 +13,8 @@ public class SurveyDriverData {
      * in PathHeader.java, and inserting this line into the PageId initialization function:
      * System.out.println("PageId raw name: " + this.toString());
      *
+     * It would be better to have an API for requesting this list from the ST back end at runtime!
+     *
      * There is a PageId enum defined in PathHeader.java. We could link with the
      * cldr-apps code and access that enum directly. However, there are difficulties
      * with initiation, like "java.lang.RuntimeException: CLDRConfigImpl used before SurveyMain.init() called!"
@@ -29,7 +31,7 @@ public class SurveyDriverData {
      */
     private static final String[] pages = {
         // prettier-ignore
-        "Alphabetic_Information", "Numbering_Systems", "Locale_Name_Patterns",
+        "Alphabetic_Information", "Numbering_Systems", "LinguisticElements", "Locale_Name_Patterns",
         "Languages_A_D", "Languages_E_J", "Languages_K_N", "Languages_O_S", "Languages_T_Z", "Scripts",
         "Territories", "T_NAmerica", "T_SAmerica", "T_Africa", "T_Europe", "T_Asia", "T_Oceania", "Locale_Variants",
         "Keys", "Fields", "Gregorian", "Generic", "Buddhist", "Chinese", "Coptic", "Dangi", "Ethiopic",
@@ -48,7 +50,7 @@ public class SurveyDriverData {
         "C_NAmerica", "C_SAmerica", "C_NWEurope", "C_SEEurope", "C_NAfrica", "C_WAfrica", "C_MAfrica", "C_EAfrica",
         "C_SAfrica", "C_WAsia", "C_CAsia", "C_EAsia", "C_SAsia", "C_SEAsia", "C_Oceania", "C_Unknown",
         "u_Extension", "t_Extension", "Alias", "IdValidity", "Locale", "RegionMapping", "WZoneMapping", "Transform",
-        "UnitPreferences", "Likely", "LanguageMatch", "TerritoryInfo", "LanguageInfo", "LanguageGroup", "Fallback",
+        "Units", "Likely", "LanguageMatch", "TerritoryInfo", "LanguageInfo", "LanguageGroup", "Fallback",
         "Gender", "Metazone", "NumberSystem", "Plural", "PluralRange", "Containment", "Currency", "Calendar",
         "WeekData", "Measurement", "Language", "RBNF", "Segmentation", "DayPeriod", "Category", "Smileys", "People",
         "Animals_Nature", "Food_Drink", "Travel_Places", "Activities", "Objects", "Symbols2", "Flags", "Component",
