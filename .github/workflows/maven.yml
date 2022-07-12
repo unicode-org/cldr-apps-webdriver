@@ -1,0 +1,53 @@
+name: maven
+
+on:
+  push:
+    paths:
+      - 'pom.xml'
+      - 'src/**'
+      - '.github/workflows/maven.yml'
+  pull_request:
+    paths:
+      - 'pom.xml'
+      - 'src/**'
+      - '.github/workflows/maven.yml'
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref (Optional)
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v3
+        with:
+          lfs: false
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (manual ref)
+        uses: actions/checkout@v3
+        with:
+          lfs: false
+          ref: ${{ github.event.inputs.git-ref }}
+        if: github.event.inputs.git-ref != ''
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Cache local Maven repository
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Lint GitHub Actions
+        run: npx yaml-lint .github/workflows/*.yml
+      - name: Build with Maven
+        run: >
+          mvn -s .github/workflows/mvn-settings.xml -B compile test-compile
+          -DskipTests=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
