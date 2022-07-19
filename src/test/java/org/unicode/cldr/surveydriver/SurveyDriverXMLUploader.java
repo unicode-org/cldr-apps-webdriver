@@ -36,7 +36,7 @@ public class SurveyDriverXMLUploader {
          * Choose "Upload XML" from the gear menu
          */
         do {
-            if (!clickOnGearElement(url)) {
+            if (!clickOnMainMenu(url)) {
                 return false;
             }
         } while (!clickOnUploadXMLElement(url));
@@ -46,19 +46,18 @@ public class SurveyDriverXMLUploader {
             return false;
         }
 
-        System.out.println("✅ XML-Upload test passed");
+        SurveyDriverLog.println("✅ XML-Upload test passed");
         return true;
     }
 
     /**
      * After new tab or window is created, switch WebDriver to it.
      * Otherwise our actions would still operate on the old window.
-     * @throws InterruptedException
      */
     private void switchToNewTabOrWindow() {
         WebDriver driver = s.driver;
         String winHandleBefore = driver.getWindowHandle();
-        System.out.println("Before switch: window = " + winHandleBefore);
+        SurveyDriverLog.println("Before switch: window = " + winHandleBefore);
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
@@ -79,7 +78,7 @@ public class SurveyDriverXMLUploader {
             e.printStackTrace();
         }
         String winHandleAfter = driver.getWindowHandle();
-        System.out.println("After switch: window = " + winHandleAfter);
+        SurveyDriverLog.println("After switch: window = " + winHandleAfter);
     }
 
     /**
@@ -88,16 +87,17 @@ public class SurveyDriverXMLUploader {
      * @param url the url we're loading
      * @return true for success, false for failure
      */
-    private boolean clickOnGearElement(String url) {
-        String className = "glyphicon-cog";
+    private boolean clickOnMainMenu(String url) {
+        String className = "main-menu-icon";
         WebElement clickEl = s.driver.findElement(By.className(className));
         if (clickEl == null) {
-            System.out.println("❌ XML-Upload test failed for getting gear menu");
+            SurveyDriverLog.println("❌ XML-Upload test failed for getting main menu");
             return false;
         }
+        clickEl = clickEl.findElement(By.xpath("./..")); // parent
         new Actions(s.driver).moveToElement(clickEl, 0, 0).build().perform();
         if (!s.waitUntilElementClickable(clickEl, url)) {
-            System.out.println("❌ XML-Upload test failed waiting for gear menu to be clickable");
+            SurveyDriverLog.println("❌ XML-Upload test failed waiting for main menu to be clickable");
             return false;
         }
         int repeats = 0;
@@ -109,14 +109,14 @@ public class SurveyDriverXMLUploader {
                 if (++repeats > 4) {
                     break;
                 }
-                System.out.println("clickOnGearElement repeating for StaleElementReferenceException in " + url);
+                SurveyDriverLog.println("clickOnMainMenu repeating for StaleElementReferenceException in " + url);
                 clickEl = s.driver.findElement(By.className(className));
             } catch (Exception e) {
-                System.out.println(e);
+                SurveyDriverLog.println(e);
                 break;
             }
         }
-        System.out.println("❗ Test failed in clickOnGearElement in " + url);
+        SurveyDriverLog.println("❗ Test failed in clickOnMainMenu in " + url);
         return false;
     }
 
@@ -131,14 +131,16 @@ public class SurveyDriverXMLUploader {
         WebElement clickEl = null;
         try {
             clickEl = s.driver.findElement(By.partialLinkText(linkText));
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            SurveyDriverLog.println(e);
+        }
         if (clickEl == null) {
-            System.out.println("❌ XML-Upload test failed for getting " + linkText + " menu");
+            SurveyDriverLog.println("❌ XML-Upload test failed for getting " + linkText + " menu");
             return false;
         }
         new Actions(s.driver).moveToElement(clickEl, 0, 0).build().perform();
         if (!s.waitUntilElementClickable(clickEl, url)) {
-            System.out.println("❌ XML-Upload test failed waiting for " + linkText + " menu to be clickable");
+            SurveyDriverLog.println("❌ XML-Upload test failed waiting for " + linkText + " menu to be clickable");
             return false;
         }
         int repeats = 0;
@@ -150,14 +152,14 @@ public class SurveyDriverXMLUploader {
                 if (++repeats > 4) {
                     break;
                 }
-                System.out.println("clickOnGearElement repeating for StaleElementReferenceException in " + url);
+                SurveyDriverLog.println("clickOnGearElement repeating for StaleElementReferenceException in " + url);
                 clickEl = s.driver.findElement(By.partialLinkText(linkText));
             } catch (Exception e) {
-                System.out.println(e);
+                SurveyDriverLog.println(e);
                 break;
             }
         }
-        System.out.println("❗ Test failed in clickOnUploadXMLElement in " + url);
+        SurveyDriverLog.println("❗ Test failed in clickOnUploadXMLElement in " + url);
         return false;
     }
 
@@ -168,41 +170,42 @@ public class SurveyDriverXMLUploader {
      * @return true for success, false for failure
      */
     private boolean specifyXmlFileToUpload(String url) {
-        String id = "file";
-        if (!s.waitUntilIdExists(id, true, url)) {
-            System.out.println("❌ XML-Upload test failed waiting for id to exist: " + id);
-            return false;
-        }
-        WebElement clickEl = s.driver.findElement(By.id(id));
-        if (clickEl == null) {
-            System.out.println("❌ XML-Upload test failed for getting id: " + id);
-            return false;
-        }
-        new Actions(s.driver).moveToElement(clickEl, 0, 0).build().perform();
-        if (!s.waitUntilElementClickable(clickEl, url)) {
-            System.out.println("❌ XML-Upload test failed waiting for element to be clickable: " + id);
-            return false;
-        }
+        final String id = "file";
+        final String xmlPathname =
+            "/Users/tbishop/Documents/WenlinDocs/Organizations/Unicode/CLDR_job/xml_upload_test.xml";
         int repeats = 0;
         for (;;) {
+            if (!s.waitUntilIdExists(id, true, url)) {
+                SurveyDriverLog.println("❌ XML-Upload test failed waiting for id to exist: " + id);
+                return false;
+            }
+            WebElement clickEl = s.driver.findElement(By.id(id));
+            if (clickEl == null) {
+                SurveyDriverLog.println("❌ XML-Upload test failed for getting id: " + id);
+                return false;
+            }
+            new Actions(s.driver).moveToElement(clickEl, 0, 0).build().perform();
+            if (!s.waitUntilElementClickable(clickEl, url)) {
+                SurveyDriverLog.println("❌ XML-Upload test failed waiting for element to be clickable: " + id);
+                return false;
+            }
             try {
-                clickEl.click();
-                String xmlPathname =
-                    "/Users/tbishop/Documents/WenlinDocs/Organizations/Unicode/CLDR_job/xml_upload_test.xml";
-                clickEl.sendKeys(xmlPathname);
+                Actions action = new Actions(s.driver);
+                action.moveToElement(clickEl).click().sendKeys(xmlPathname).perform();
                 return true;
             } catch (StaleElementReferenceException e) {
                 if (++repeats > 4) {
                     break;
                 }
-                System.out.println("specifyXmlFileToUpload repeating for StaleElementReferenceException in " + url);
-                clickEl = s.driver.findElement(By.id(id));
+                SurveyDriverLog.println(
+                    "specifyXmlFileToUpload repeating for StaleElementReferenceException in " + url
+                );
             } catch (Exception e) {
-                System.out.println(e);
+                SurveyDriverLog.println(e);
                 break;
             }
         }
-        System.out.println("❗ Test failed in specifyXmlFileToUpload in " + url);
+        SurveyDriverLog.println("❗ Test failed in specifyXmlFileToUpload in " + url);
         return false;
     }
 }
