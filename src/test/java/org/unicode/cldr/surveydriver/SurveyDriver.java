@@ -312,10 +312,10 @@ public class SurveyDriver {
          * Displayed rows depend on coverage level, which in turn depends on the user; if we're logged
          * in as Admin, then we see Comprehensive; if not logged in, we see Modern (and we can't vote).
          * Something seems to have changed between versions 34 and 35; now first four rows are:
-         *     Abkhazian ► ab	r@f3d4397b739b287
-         * 	   Achinese ► ace	r@6899b21f19eef8cc
-         * 	   Acoli ► ach		r@1660459cc74c9aec
-         * 	   Adangme ► ada	r@7d1d3cbd260601a4
+         *     Abkhazian ► ab	row_f3d4397b739b287
+         * 	   Achinese ► ace	row_6899b21f19eef8cc
+         * 	   Acoli ► ach		row_1660459cc74c9aec
+         * 	   Adangme ► ada	row_7d1d3cbd260601a4
          * Acoli appears to be a new addition.
          */
         String[] rowIds = { "f3d4397b739b287", "6899b21f19eef8cc", "1660459cc74c9aec", "7d1d3cbd260601a4" };
@@ -323,7 +323,7 @@ public class SurveyDriver {
         final boolean verbose = true;
         for (String cell : cellClasses) {
             for (int i = 0; i < rowIds.length; i++) {
-                String rowId = "r@" + rowIds[i];
+                String rowId = "row_" + rowIds[i];
                 boolean doAdd = (i == rowIds.length - 1) && cell.equals("proposedcell");
                 String tagName = doAdd ? "button" : "input";
                 String cellClass = doAdd ? "addcell" : cell;
@@ -665,7 +665,7 @@ public class SurveyDriver {
 
         WebElement el = null;
         try {
-            el = driver.findElement(By.id("r@44fca52aa81abcb2"));
+            el = driver.findElement(By.id("row_44fca52aa81abcb2"));
         } catch (Exception e) {}
         if (el != null) {
             SurveyDriverLog.println("✅✅✅ Got it in " + url);
