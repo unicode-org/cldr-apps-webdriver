@@ -34,6 +34,7 @@ jobs:
         if: github.event.inputs.git-ref != ''
       - name: Set up JDK
         uses: actions/setup-java@v3
+        distribution: temurin
         with:
           java-version: 11
       - name: Cache local Maven repository
