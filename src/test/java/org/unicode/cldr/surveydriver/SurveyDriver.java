@@ -31,42 +31,34 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 /**
  * Perform automated testing of the CLDR Survey Tool using Selenium WebDriver.
- * Reference: https://unicode.org/cldr/trac/ticket/11488
- *   "Implement new Survey Tool automated test framework and infrastructure"
  *
- * This test has been used with the cldr-apps-webdriver project running in Eclipse. At the same time,
- * cldr-apps can be running either on localhost (in the same Eclipse as cldr-apps-webdriver) or on SmokeTest.
+ * This test has been used with the cldr-apps-webdriver project running in IntelliJ. At the same time,
+ * cldr-apps can be running either on localhost or on SmokeTest.
  *
  * This code requires installing an implementation of WebDriver, such as chromedriver for Chrome.
  * On macOS, chromedriver can be installed from Terminal with brew as follows:
- *   brew tap homebrew/cask
  *   brew install chromedriver
- * -- or download chromedriver from https://chromedriver.storage.googleapis.com
- * (Testing with geckodriver for Firefox has been unsuccessful.)
+ * Then, right-click chromedriver, choose Open, and authorize to avoid the macOS error,
+ * "“chromedriver” cannot be opened because the developer cannot be verified".
+ * Press Ctrl+C to stop this instance of chromedriver.
  *
- * A tutorial for setting up a project using Selenium in Eclipse:
- *   https://www.guru99.com/selenium-tutorial.html
+ * (Testing with geckodriver for Firefox was unsuccessful, but has not been tried recently.)
  *
- * The Selenium jar files must be added to the Eclipse project. Download from
- * https://www.seleniumhq.org/download/ and unzip to get a folder like selenium-java-3.141.59.
- * In Eclipse, right-click on "cldr-apps-webdriver" and select Properties. Click on "Java Build Path".
- * Click on the Libraries tab. Click on "Add External JARs". Navigate to the selenium folder and
- * add all the jar files outside the "lib" folder. Click on "Add External JARs" again and add all
- * the jar files inside "lib".
+ * Go to https://www.selenium.dev/downloads/ and scroll down to "Selenium Server (Grid)" and
+ * follow the link to download a file like selenium-server-4.16.1.jar and save it in the parent
+ * directory of cldr-apps-webdriver.
  *
- * For Gson, CLDR already includes cldr/tools/java/libs/gson.jar. Take advantage of that
- * and add it to Eclipse as follows: Right-click on "cldr-apps-webdriver" and select Properties.
- * Click on "Java Build Path". Click on the Libraries tab. Click on "Add External JARs".
- * Navigate to cldr/tools/java/libs and select gson.jar.
- *
- * Setting up may require adding a specific set of test users to the db, consistent
- * with getNodeLoginQuery:
+ * Add a specific set of simulated test users to the db, consistent with the method getNodeLoginQuery below:
  *
  *     mysql cldrdb < cldr-apps-webdriver/scripts/cldr-add-webdrivers.sql
  *
- * and starting selenium grid:
+ * Start selenium grid:
  *
  *     sh cldr-apps-webdriver/scripts/selenium-grid-start.sh &
+ *
+ * Open this file (SurveyDriver.java) in IntelliJ, right-click cldr-apps-webdriver in the Project
+ * panel, and choose "Debug All Tests". You can do this repeatedly to start multiple browsers with
+ * simulated vetters vetting at the same time.
  */
 public class SurveyDriver {
 
