@@ -12,20 +12,20 @@ public class SurveyDriverData {
      * This list of page names was created by temporarily commenting out the toString function
      * in PathHeader.java, and inserting this line into the PageId initialization function:
      * System.out.println("PageId raw name: " + this.toString());
-     *
+     * <p>
      * It would be better to have an API for requesting this list from the ST back end at runtime!
-     *
+     * <p>
      * There is a PageId enum defined in PathHeader.java. We could link with the
      * cldr-apps code and access that enum directly. However, there are difficulties
      * with initiation, like "java.lang.RuntimeException: CLDRConfigImpl used before SurveyMain.init() called!"
      * "Set -DCLDR_ENVIRONMENT=UNITTEST if you are in the test cases." Follow up on that possibility later.
      * In the meantime, we can copy and simplify the enum from PathHeader.java, since all we need here
      * is an array of strings.
-     *
+     * <p>
      * PageId versus SectionId: PageId.Alphabetic_Information is in the section SectionId.Core_Data
-     *
+     * <p>
      * Alphabetic_Information(SectionId.Core_Data, "Alphabetic Information")
-     *
+     * <p>
      * Each page is one web page; a section may encompass multiple pages, not all visible at once.
      * (There may also be multiple headers in one page. See PathHeader.txt which is a source file.)
      */

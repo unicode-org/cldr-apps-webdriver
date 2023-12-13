@@ -16,7 +16,6 @@ public class SurveyDriverXMLUploader {
 
     /**
      * Test the XMLUploader interface ("Upload XML" in the gear menu).
-     * Reference: https://unicode-org.atlassian.net/browse/CLDR-13217
      */
     public boolean testXMLUploader() {
         if (!s.login()) {
@@ -52,7 +51,7 @@ public class SurveyDriverXMLUploader {
 
     /**
      * After new tab or window is created, switch WebDriver to it.
-     * Otherwise our actions would still operate on the old window.
+     * Otherwise, our actions would still operate on the old window.
      */
     private void switchToNewTabOrWindow() {
         WebDriver driver = s.driver;

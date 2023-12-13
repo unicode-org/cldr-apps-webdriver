@@ -31,31 +31,31 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 /**
  * Perform automated testing of the CLDR Survey Tool using Selenium WebDriver.
- *
+ * <p>
  * This test has been used with the cldr-apps-webdriver project running in IntelliJ. At the same time,
  * cldr-apps can be running either on localhost or on SmokeTest.
- *
+ * <p>
  * This code requires installing an implementation of WebDriver, such as chromedriver for Chrome.
  * On macOS, chromedriver can be installed from Terminal with brew as follows:
  *   brew install chromedriver
  * Then, right-click chromedriver, choose Open, and authorize to avoid the macOS error,
  * "“chromedriver” cannot be opened because the developer cannot be verified".
  * Press Ctrl+C to stop this instance of chromedriver.
- *
+ * <p>
  * (Testing with geckodriver for Firefox was unsuccessful, but has not been tried recently.)
- *
- * Go to https://www.selenium.dev/downloads/ and scroll down to "Selenium Server (Grid)" and
- * follow the link to download a file like selenium-server-4.16.1.jar and save it in the parent
- * directory of cldr-apps-webdriver.
- *
+ * <p>
+ * Go to <a href="https://www.selenium.dev/downloads/">selenium.dev/downloads</a> and scroll down
+ * to "Selenium Server (Grid)" and follow the link to download a file like selenium-server-4.16.1.jar
+ * and save it in the parent directory of cldr-apps-webdriver.
+ * <p>
  * Add a specific set of simulated test users to the db, consistent with the method getNodeLoginQuery below:
- *
+ * <p>
  *     mysql cldrdb < cldr-apps-webdriver/scripts/cldr-add-webdrivers.sql
- *
+ * <p>
  * Start selenium grid:
- *
+ * <p>
  *     sh cldr-apps-webdriver/scripts/selenium-grid-start.sh &
- *
+ * <p>
  * Open this file (SurveyDriver.java) in IntelliJ, right-click cldr-apps-webdriver in the Project
  * panel, and choose "Debug All Tests". You can do this repeatedly to start multiple browsers with
  * simulated vetters vetting at the same time.
@@ -82,18 +82,22 @@ public class SurveyDriver {
 
     /*
      * If USE_REMOTE_WEBDRIVER is true, then the driver will be a RemoteWebDriver (a class that implements
-     * the WebDriver interface). Otherwise the driver could be a ChromeDriver, or FirefoxDriver, EdgeDriver,
+     * the WebDriver interface). Otherwise, the driver could be a ChromeDriver, or FirefoxDriver, EdgeDriver,
      * or SafariDriver (all subclasses of RemoteWebDriver) if we add options for those.
      * While much of the code in this class works either way, Selenium Grid needs the driver to be a
      * RemoteWebDriver and requires installation of a hub and one or more nodes, which can be done by
      *
      *     sh scripts/selenium-grid-start.sh
      *
-     * It contains commands of these types (first node is default port 5555, second node explicit port 5556):
+     * It contains commands of these types (where x.x.x stands for the Selenium version number):
      *
-     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role hub
-     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role node
-     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-standalone-x.x.x.jar -role node -port 5556
+     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-x.x.x.jar standalone
+     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-x.x.x.jar standalone --port 5555
+     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-x.x.x.jar standalone --port 5556
+     * ...
+     *
+     * The port numbers 5555, ... in selenium-grid-start.sh must be consistent with the method
+     * SurveyDriver.getNodeLoginQuery.
      */
     static final boolean USE_REMOTE_WEBDRIVER = true;
     static final String REMOTE_WEBDRIVER_URL = "http://localhost:4444";
@@ -206,17 +210,12 @@ public class SurveyDriver {
     /**
      * Test "fast" voting, that is, voting for several items on a page, and measuring
      * the time of response.
-     *
+     * <p>
      * Purposes:
      * (1) study the sequence of events, especially client-server traffic,
      * when multiple voting events (maybe by a single user) are being handled;
      * (2) simulate simultaneous input from multiple vetters, for integration and
      * performance testing under high load.
-     *
-     * References:
-     * https://cldr.unicode.org/index/cldr-engineer/sow "Performance Improvement Goals"
-     * https://unicode.org/cldr/trac/ticket/11211 "Performance is slow when voting on multiple items on a page"
-     * https://unicode.org/cldr/trac/ticket/10990 "Fix synchronize (threading)"
      */
     private boolean testFastVoting() {
         if (!login()) {
@@ -233,11 +232,11 @@ public class SurveyDriver {
         String url = BASE_URL + "v#/" + loc + "/" + page;
 
         /*
-         * Repeat the test for a minute or so.
+         * Repeat the test a large number of times.
          * Eventually we'll have more sophisticated criteria for when to stop.
-         * This loop to 1000 isn't set in stone.
          */
-        for (int i = 0; i < 1000; i++) {
+        final int REPETITION_COUNT = 10000;
+        for (int i = 0; i < REPETITION_COUNT; i++) {
             SurveyDriverLog.println("testFastVoting i = " + i);
             try {
                 if (!testFastVotingInner(page, url)) {
@@ -245,12 +244,12 @@ public class SurveyDriver {
                 }
             } catch (StaleElementReferenceException e) {
                 /*
-                 * Sometimes we get "org.openqa.selenium.StaleElementReferenceException:
+                 * Formerly sometimes we got "org.openqa.selenium.StaleElementReferenceException:
                  * stale element reference: element is not attached to the page document".
-                 * Presumably this happens due to ajax response causing the table to be rebuilt.
-                 * TODO: catch this exception and continue wherever it occurs. Ideally also CldrSurveyVettingTable.js
-                 * may be revised to update the table in place when possible instead of rebuilding the
-                 * table from scratch so often. Reference: https://unicode.org/cldr/trac/ticket/11571
+                 * It may have been due to ajax response causing the table to be rebuilt.
+                 * Survey Tool has since been revised so that the table is rebuilt less often.
+                 * If this exception becomes problematic, we should investigate ways to catch it
+                 * and continue wherever it occurs.
                  */
                 SurveyDriverLog.println("Continuing main loop after StaleElementReferenceException, i = " + i);
             }
@@ -319,7 +318,7 @@ public class SurveyDriver {
                 boolean doAdd = (i == rowIds.length - 1) && cell.equals("proposedcell");
                 String tagName = doAdd ? "button" : "input";
                 String cellClass = doAdd ? "addcell" : cell;
-                WebElement rowEl = null, columnEl = null, clickEl = null;
+                WebElement rowEl = null, columnEl, clickEl = null;
                 int repeats = 0;
                 if (verbose) {
                     String op = cell.equals("nocell") ? "Abstain" : "Vote";
@@ -521,12 +520,15 @@ public class SurveyDriver {
      * Get a query string for logging in as a particular user. It may depend on which Selenium node
      * we're running on. It could also depend on BASE_URL if we're running on SmokeTest rather than
      * localhost.
-     *
-     * Currently this set of users depends on running a mysql script on localhost or SmokeTest.
+     * <p>
+     * Currently, this set of users depends on running a mysql script on localhost or SmokeTest.
      * See scripts/cldr-add-webdrivers.sql, usage "mysql cldrdb < cldr-apps-webdriver/scripts/cldr-add-webdrivers.sql".
-     *
-     * Make sure users have permission to vote in their locales. Admin and TC users can vote in all locales,
-     * so an easy way is to make them all TC or admin.
+     * The usernames and passwords here need to agree with that script.
+     * <p>
+     * Make sure users have permission to vote in their locales. TC users can vote in all locales,
+     * so an easy way is to make them all TC.
+     * <p>
+     * The range of port numbers 5555, ..., here needs to match selenium-grid-start.sh
      */
     private String getNodeLoginQuery() {
         if (nodePort == 5555) {
@@ -556,10 +558,7 @@ public class SurveyDriver {
         if (nodePort == 5563) {
             return "survey?email=studentdriver.h.ze76.2p@nd3e.government%20of%20pakistan%20-%20national%20language%20authority.example.com&uid=S5fpuRqHW";
         }
-        /*
-         * 5564 or other:
-         */
-        return "survey?email=admin@&uid=pTFjaLECN";
+        throw new RuntimeException("Unexpected node port " + nodePort);
     }
 
     /**
@@ -658,7 +657,7 @@ public class SurveyDriver {
         WebElement el = null;
         try {
             el = driver.findElement(By.id("row_44fca52aa81abcb2"));
-        } catch (Exception e) {}
+        } catch (Exception ignored) {}
         if (el != null) {
             SurveyDriverLog.println("✅✅✅ Got it in " + url);
         }
@@ -933,10 +932,10 @@ public class SurveyDriver {
     /**
      * Wait until the element specified by rowId, cellClass, tagName is clickable.
      *
-     * @param clickEl
-     * @param rowId
-     * @param cellClass
-     * @param tagName
+     * @param clickEl the element to wait for, if not stale
+     * @param rowId the id for the row element
+     * @param cellClass the class of the cell, typically "nocell", "proposedcell", or "addcell"
+     * @param tagName typically "button" or "input"
      * @param url the url we're loading
      * @return the (possibly updated) clickEl for success, null for failure
      */
@@ -996,16 +995,15 @@ public class SurveyDriver {
     }
 
     /**
-     * Click on the element specified by rowId, cellClass, tagName.
+     * Click on the element specified by clickEl, rowId, cellClass, tagName.
      *
-     * @param clickEl
-     * @param rowId
-     * @param cellClass
-     * @param tagName
+     * @param clickEl the element to click on, if not stale
+     * @param rowId the id for the row element
+     * @param cellClass the class of the cell, typically "nocell", "proposedcell", or "addcell"
+     * @param tagName typically "button" or "input"
      * @param url the url we're loading
-     * @return true for success, false for failure
      */
-    public boolean clickOnRowCellTagElement(
+    public void clickOnRowCellTagElement(
         WebElement clickEl,
         String rowId,
         String cellClass,
@@ -1016,7 +1014,7 @@ public class SurveyDriver {
         for (;;) {
             try {
                 clickEl.click();
-                return true;
+                return;
             } catch (StaleElementReferenceException e) {
                 if (++repeats > 4) {
                     break;
@@ -1046,7 +1044,6 @@ public class SurveyDriver {
         SurveyDriverLog.println(
             "❗ Test failed in clickOnRowCellTagElement for " + rowId + "," + cellClass + "," + tagName + " in " + url
         );
-        return false;
     }
 
     /**
@@ -1117,13 +1114,14 @@ public class SurveyDriver {
         return true;
     }
 
-    class SurveyDriverTestSession {
-
-        String msg = null;
-        String success = null;
-        String session = null;
-        String internalKey = null;
-        String inactivityTime = null;
+    static class SurveyDriverTestSession {
         String proxyId = null;
+        /* Additional fields currently unused:
+            String msg = null;
+            String success = null;
+            String session = null;
+            String internalKey = null;
+            String inactivityTime = null;
+         */
     }
 }
