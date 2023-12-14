@@ -16,12 +16,8 @@ public class SurveyDriverVettingTable {
 
     /**
      * Test the vetting table to make sure it contains the expected content under certain circumstances.
-     *
-     * Purpose: make sure that code revisions, such as refactoring CldrSurveyVettingTable.js, do not
-     * cause unintended changes to the table contents.
-     *
-     * https://unicode-org.atlassian.net/browse/CLDR-11571 "Avoid rebuilding entire table on Survey Tool update"
-     * https://unicode-org.atlassian.net/browse/CLDR-11943 "Implement automated testing for Survey Tool table updating"
+     * <p>
+     * Purpose: make sure that code revisions do not cause unintended changes to the table contents.
      */
     public static boolean testVettingTable(SurveyDriver s) {
         if (!s.login()) {
@@ -146,7 +142,7 @@ public class SurveyDriverVettingTable {
             boolean doAdd = cell.equals("input");
             String tagName = doAdd ? "button" : "input";
             String cellClass = doAdd ? "addcell" : cell;
-            WebElement rowEl = null, columnEl = null, clickEl = null;
+            WebElement rowEl = null, columnEl, clickEl = null;
 
             int repeats = 0;
             for (;;) {
