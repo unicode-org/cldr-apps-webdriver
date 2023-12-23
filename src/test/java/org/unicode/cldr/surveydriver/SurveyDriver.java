@@ -2,14 +2,13 @@ package org.unicode.cldr.surveydriver;
 
 import static org.junit.Assert.assertTrue;
 
-import com.google.gson.Gson;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
@@ -48,10 +47,6 @@ import org.openqa.selenium.support.ui.WebDriverWait;
  * to "Selenium Server (Grid)" and follow the link to download a file like selenium-server-4.16.1.jar
  * and save it in the parent directory of cldr-apps-webdriver.
  * <p>
- * Add a specific set of simulated test users to the db, consistent with the method getNodeLoginQuery below:
- * <p>
- *     mysql cldrdb < cldr-apps-webdriver/scripts/cldr-add-webdrivers.sql
- * <p>
  * Start selenium grid:
  * <p>
  *     sh cldr-apps-webdriver/scripts/selenium-grid-start.sh &
@@ -72,10 +67,11 @@ public class SurveyDriver {
     static final boolean TEST_XML_UPLOADER = false;
 
     /*
-     * Configure for Survey Tool server, which can be localhost, SmokeTest, or other
+     * Configure for Survey Tool server, which can be localhost, cldr-smoke, cldr-staging, ...
      */
     static final String BASE_URL = "http://localhost:9080/cldr-apps/";
-    // static final String BASE_URL = "http://cldr-smoke.unicode.org/smoketest/";
+    // static final String BASE_URL = "https://cldr-smoke.unicode.org/cldr-apps/";
+    // static final String BASE_URL = "https://cldr-staging.unicode.org/cldr-apps/";
 
     static final long TIME_OUT_SECONDS = 30;
     static final long SLEEP_MILLISECONDS = 100;
@@ -85,19 +81,9 @@ public class SurveyDriver {
      * the WebDriver interface). Otherwise, the driver could be a ChromeDriver, or FirefoxDriver, EdgeDriver,
      * or SafariDriver (all subclasses of RemoteWebDriver) if we add options for those.
      * While much of the code in this class works either way, Selenium Grid needs the driver to be a
-     * RemoteWebDriver and requires installation of a hub and one or more nodes, which can be done by
+     * RemoteWebDriver and requires installation of a hub and one or more "slots", which can be done by
      *
      *     sh scripts/selenium-grid-start.sh
-     *
-     * It contains commands of these types (where x.x.x stands for the Selenium version number):
-     *
-     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-x.x.x.jar standalone
-     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-x.x.x.jar standalone --port 5555
-     * HUB_URL=http://localhost:4444/grid/register java -jar selenium-server-x.x.x.jar standalone --port 5556
-     * ...
-     *
-     * The port numbers 5555, ... in selenium-grid-start.sh must be consistent with the method
-     * SurveyDriver.getNodeLoginQuery.
      */
     static final boolean USE_REMOTE_WEBDRIVER = true;
     static final String REMOTE_WEBDRIVER_URL = "http://localhost:4444";
@@ -105,7 +91,15 @@ public class SurveyDriver {
     public WebDriver driver;
     public WebDriverWait wait;
     private SessionId sessionId = null;
-    private int nodePort = 5555; // default, may be changed
+
+    /**
+     * A nonnegative integer associated with a particular simulated user of Survey Tool,
+     * and with a particular instance of a browser in the selenium grid. The user's
+     * email address will be like "driver-123@cldr-apps-webdriver.org", where 123
+     * would be the userIndex.
+     */
+    private int userIndex = 0; // possibly changed below, see getUserIndexFromGrid
+
     private boolean gotComprehensiveCoverage = false;
 
     public static void runTests() {
@@ -138,7 +132,7 @@ public class SurveyDriver {
 
         ChromeOptions options = new ChromeOptions();
         options.setCapability("goog:loggingPrefs", logPrefs);
-        // options.addArguments("start-maximized"); // doesn't work
+        // options.addArguments("start-maximized"); // this works, but inconvenient especially if more than one
         // options.addArguments("auto-open-devtools-for-tabs"); // this works, but makes window too narrow
         if (USE_REMOTE_WEBDRIVER) {
             try {
@@ -150,41 +144,10 @@ public class SurveyDriver {
             SurveyDriverLog.println("Session id = " + sessionId); // e.g., 9c0d7d317d64cb53b6eaefc70427d4d8
         } else {
             driver = new ChromeDriver(options);
-            // driver.manage().window().maximize(); // doesn't work
         }
         wait = new WebDriverWait(driver, Duration.ofSeconds(TIME_OUT_SECONDS), Duration.ofMillis(SLEEP_MILLISECONDS));
         if (USE_REMOTE_WEBDRIVER) {
-            /*
-             * http://localhost:4444/grid/api/testsession?session=<SessionIdGoesHere>
-             * That returns json such as:
-             * {"msg":"slot found !",
-             * "success":true,
-             * "session":"9fb6ca4b0548bc4708bfd4708732bdd6",
-             * "internalKey":"1ae1fb96-8188-4c0e-9f49-051993962939",
-             * "inactivityTime":108,
-             * "proxyId":"http://192.168.2.10:5556"}
-             *
-             * The proxyId tells the port (like 5556) which in turn tells us which node we're on
-             */
-            String url = REMOTE_WEBDRIVER_URL + "/grid/api/testsession?session=" + sessionId;
-            // String url = REMOTE_WEBDRIVER_URL + "/grid/api/hub/status?" + sessionId;
-
-            driver.get(url);
-            String jsonString = driver.findElement(By.tagName("body")).getText();
-            SurveyDriverLog.println("jsonString = " + jsonString);
-            Gson gson = new Gson();
-            SurveyDriverTestSession obj = gson.fromJson(jsonString, SurveyDriverTestSession.class);
-            if (obj == null) {
-                SurveyDriverLog.println("Null SurveyDriverTestSession in setUp");
-            } else {
-                String proxyId = obj.proxyId;
-                if (proxyId != null) {
-                    Matcher m = Pattern.compile(":(\\d+)$").matcher(proxyId);
-                    if (m.find()) {
-                        nodePort = Integer.parseInt(m.group(1)); // e.g., 5556
-                    }
-                }
-            }
+            userIndex = getUserIndexFromGrid(sessionId);
         }
     }
 
@@ -192,7 +155,7 @@ public class SurveyDriver {
      * Clean up when finished testing.
      */
     private void tearDown() {
-        SurveyDriverLog.println("cldr-apps-webdriver is quitting, goodbye from node on port " + nodePort);
+        SurveyDriverLog.println("cldr-apps-webdriver is quitting, goodbye from sessionId " + sessionId);
         if (driver != null) {
             /*
              * This five-second sleep may not always be appropriate. It can help to see the browser for a few seconds
@@ -222,12 +185,10 @@ public class SurveyDriver {
             return false;
         }
         /*
-         * TODO: configure the locale and page on a per-node basis, to enable multiple simulated
+         * TODO: configure the locale and page on a per-slot basis, to enable multiple simulated
          * users to be voting in multiple locales and/or pages.
          */
         String loc = "sr";
-        // String loc = "ar";
-        // String loc = "en_CA";
         String page = "Languages_A_D";
         String url = BASE_URL + "v#/" + loc + "/" + page;
 
@@ -442,15 +403,11 @@ public class SurveyDriver {
                         if (inputEl == null) {
                             SurveyDriverLog.println("Warning: continuing, didn't see input box for " + url);
                             continue;
-                            // SurveyDriverLog.println("❌ Fast vote test failed, didn't see input box for " + url);
-                            // return false;
                         }
                         inputEl = waitUntilRowCellTagElementClickable(inputEl, rowId, cellClass, "input", url);
                         if (inputEl == null) {
                             SurveyDriverLog.println("Warning: continuing, input box not clickable for " + url);
                             continue;
-                            // SurveyDriverLog.println("❌ Fast vote test failed, input box not clickable for " + url);
-                            // return false;
                         }
                         inputEl.clear();
                         inputEl.click();
@@ -463,15 +420,6 @@ public class SurveyDriver {
                     }
                 }
             }
-        }
-        /*
-         * TODO: Wait for tr_checking2 element (temporary green background) to exist.
-         * Problem: sometimes server is too fast and/or our polling isn't frequent enough,
-         * and then the tr_checking2 element(s) are already gone before we get here.
-         * For now, skip this call.
-         */
-        if (false && !waitUntilClassExists("tr_checking2", true, url)) {
-            return false;
         }
         /*
          * Wait for tr_checking2 element (temporary green background) NOT to exist.
@@ -491,7 +439,7 @@ public class SurveyDriver {
      * Log into Survey Tool.
      */
     public boolean login() {
-        String url = BASE_URL + getNodeLoginQuery();
+        final String url = BASE_URL;
         SurveyDriverLog.println("Logging in to " + url);
         driver.get(url);
 
@@ -506,6 +454,9 @@ public class SurveyDriver {
         if (!waitUntilLoadingMessageDone(url)) {
             return false;
         }
+        if (!loginWithButton(url)) {
+            return false;
+        }
         /*
          * To make sure we're really logged in, find an element with class "glyphicon-user".
          */
@@ -516,49 +467,77 @@ public class SurveyDriver {
         return true;
     }
 
-    /**
-     * Get a query string for logging in as a particular user. It may depend on which Selenium node
-     * we're running on. It could also depend on BASE_URL if we're running on SmokeTest rather than
-     * localhost.
-     * <p>
-     * Currently, this set of users depends on running a mysql script on localhost or SmokeTest.
-     * See scripts/cldr-add-webdrivers.sql, usage "mysql cldrdb < cldr-apps-webdriver/scripts/cldr-add-webdrivers.sql".
-     * The usernames and passwords here need to agree with that script.
-     * <p>
-     * Make sure users have permission to vote in their locales. TC users can vote in all locales,
-     * so an easy way is to make them all TC.
-     * <p>
-     * The range of port numbers 5555, ..., here needs to match selenium-grid-start.sh
-     */
-    private String getNodeLoginQuery() {
-        if (nodePort == 5555) {
-            return "survey?email=sundaydriver.ta9emn2f.@czca.bangladesh.example.com&uid=ME0BtTx7J";
+    private boolean loginWithButton(String url) {
+        final String loginXpath = "//span[text()='Log In']";
+        final String usernameXpath = "//input[@placeholder='Username']";
+        final String passwordXpath = "//input[@placeholder='Password']";
+        final SurveyDriverCredentials cred = SurveyDriverCredentials.getForUser(userIndex);
+        if (!clickButtonByXpath(loginXpath, url)) {
+            return false;
         }
-        if (nodePort == 5556) {
-            return "survey?email=mondaydriver.fvuisg2in@sisi.sil.example.com&uid=OjATx0fTt";
+        if (!inputTextByXpath(usernameXpath, cred.getEmail(), url)) {
+            return false;
         }
-        if (nodePort == 5557) {
-            return "survey?email=tuesdaydriver.smw4grsg0@ork0.netflix.example.com&uid=QEuNcNCvi";
+        if (!inputTextByXpath(passwordXpath, cred.getPassword(), url)) {
+            return false;
         }
-        if (nodePort == 5558) {
-            return "survey?email=wednesdaydriver.kesjczv8q@8sye.afghan-csa.example.com&uid=MjpHbYuJY";
+        return clickButtonByXpath(loginXpath, url);
+    }
+
+    private boolean clickButtonByXpath(String xpath, String url) {
+        WebElement el = getClickableElementByXpath(xpath, url);
+        if (el == null) {
+            return false;
         }
-        if (nodePort == 5559) {
-            return "survey?email=thursdaydriver.klxizrpyc@p9mn.welsh-lc.example.com&uid=cMkLuCab1";
+        try {
+            el.click();
+        } catch (Exception e) {
+            SurveyDriverLog.println("Exception caught while trying to click " + xpath + " element");
+            SurveyDriverLog.println(e);
+            return false;
         }
-        if (nodePort == 5560) {
-            return "survey?email=fridaydriver.kclabyoxi@fgkg.mozilla.example.com&uid=qSR.KZ57V";
+        return true;
+    }
+
+    private boolean inputTextByXpath(String xpath, String text, String url) {
+        WebElement el = getClickableElementByXpath(xpath, url);
+        if (el == null) {
+            return false;
         }
-        if (nodePort == 5561) {
-            return "survey?email=saturdaydriver.oelbvfn0x@smiz.cherokee.example.com&uid=r3Lim3OFL";
+        try {
+            el.clear();
+            el.click();
+            el.sendKeys(text);
+            el.sendKeys(Keys.RETURN);
+        } catch (Exception e) {
+            SurveyDriverLog.println("Exception caught while trying to input text " + text);
+            SurveyDriverLog.println(e);
+            return false;
         }
-        if (nodePort == 5562) {
-            return "survey?email=backseatdriver.cogihy42h@jqs9.india.example.com&uid=LenA3VJSK";
+        return true;
+    }
+
+    private WebElement getClickableElementByXpath(String xpath, String url) {
+        try {
+            wait.until(
+                (ExpectedCondition<Boolean>) webDriver -> driver.findElement(By.xpath(xpath)) != null
+            );
+        } catch (Exception e) {
+            SurveyDriverLog.println(e);
+            SurveyDriverLog.println("❌ Test failed, timed out waiting for element to be found by xpath " + xpath + " in url " + url);
+            return null;
         }
-        if (nodePort == 5563) {
-            return "survey?email=studentdriver.h.ze76.2p@nd3e.government%20of%20pakistan%20-%20national%20language%20authority.example.com&uid=S5fpuRqHW";
+        WebElement el;
+        try {
+            el = driver.findElement(By.xpath(xpath));
+            wait.until(ExpectedConditions.elementToBeClickable(el));
+        } catch (Exception e) {
+            SurveyDriverLog.println(e);
+            SurveyDriverLog.println(
+                "❌ Test failed, timed out waiting for " + xpath + " button to be clickable in " + url);
+            return null;
         }
-        throw new RuntimeException("Unexpected node port " + nodePort);
+        return el;
     }
 
     /**
@@ -737,12 +716,7 @@ public class SurveyDriver {
     public boolean waitForTitle(String s, String url) {
         try {
             wait.until(
-                new ExpectedCondition<Boolean>() {
-                    @Override
-                    public Boolean apply(WebDriver webDriver) {
-                        return (webDriver.getTitle().contains(s));
-                    }
-                }
+                (ExpectedCondition<Boolean>) webDriver -> (Objects.requireNonNull(webDriver).getTitle().contains(s))
             );
         } catch (Exception e) {
             SurveyDriverLog.println(e);
@@ -764,12 +738,7 @@ public class SurveyDriver {
         String loadingId = "LoadingMessageSection";
         try {
             wait.until(
-                new ExpectedCondition<Boolean>() {
-                    @Override
-                    public Boolean apply(WebDriver webDriver) {
-                        return webDriver.findElement(By.id(loadingId)).getCssValue("display").contains("none");
-                    }
-                }
+                (ExpectedCondition<Boolean>) webDriver -> Objects.requireNonNull(webDriver).findElement(By.id(loadingId)).getCssValue("display").contains("none")
             );
         } catch (Exception e) {
             SurveyDriverLog.println(e);
@@ -825,12 +794,9 @@ public class SurveyDriver {
     public boolean waitUntilElementActive(String id, String url) {
         try {
             wait.until(
-                new ExpectedCondition<Boolean>() {
-                    @Override
-                    public Boolean apply(WebDriver webDriver) {
-                        WebElement el = webDriver.findElement(By.id(id));
-                        return el != null && el.getAttribute("class").contains("active");
-                    }
+                (ExpectedCondition<Boolean>) webDriver -> {
+                    WebElement el = Objects.requireNonNull(webDriver).findElement(By.id(id));
+                    return el != null && el.getAttribute("class").contains("active");
                 }
             );
         } catch (Exception e) {
@@ -851,12 +817,9 @@ public class SurveyDriver {
     public boolean waitUntilElementInactive(String id, String url) {
         try {
             wait.until(
-                new ExpectedCondition<Boolean>() {
-                    @Override
-                    public Boolean apply(WebDriver webDriver) {
-                        WebElement el = webDriver.findElement(By.id(id));
-                        return el == null || !el.getAttribute("class").contains("active");
-                    }
+                (ExpectedCondition<Boolean>) webDriver -> {
+                    WebElement el = Objects.requireNonNull(webDriver).findElement(By.id(id));
+                    return el == null || !el.getAttribute("class").contains("active");
                 }
             );
         } catch (Exception e) {
@@ -1057,14 +1020,9 @@ public class SurveyDriver {
     public boolean waitUntilClassExists(String className, boolean checking, String url) {
         try {
             wait.until(
-                new ExpectedCondition<Boolean>() {
-                    @Override
-                    public Boolean apply(WebDriver webDriver) {
-                        // WebElement el = webDriver.findElement(By.className(className));
-                        // return checking ? (el != null) : (el == null);
-                        int elCount = webDriver.findElements(By.className(className)).size();
-                        return checking ? (elCount > 0) : (elCount == 0);
-                    }
+                (ExpectedCondition<Boolean>) webDriver -> {
+                    int elCount = Objects.requireNonNull(webDriver).findElements(By.className(className)).size();
+                    return checking ? (elCount > 0) : (elCount == 0);
                 }
             );
         } catch (Exception e) {
@@ -1092,12 +1050,9 @@ public class SurveyDriver {
     public boolean waitUntilIdExists(String idName, boolean checking, String url) {
         try {
             wait.until(
-                new ExpectedCondition<Boolean>() {
-                    @Override
-                    public Boolean apply(WebDriver webDriver) {
-                        int elCount = webDriver.findElements(By.id(idName)).size();
-                        return checking ? (elCount > 0) : (elCount == 0);
-                    }
+                (ExpectedCondition<Boolean>) webDriver -> {
+                    int elCount = Objects.requireNonNull(webDriver).findElements(By.id(idName)).size();
+                    return checking ? (elCount > 0) : (elCount == 0);
                 }
             );
         } catch (Exception e) {
@@ -1114,14 +1069,54 @@ public class SurveyDriver {
         return true;
     }
 
-    static class SurveyDriverTestSession {
-        String proxyId = null;
-        /* Additional fields currently unused:
-            String msg = null;
-            String success = null;
-            String session = null;
-            String internalKey = null;
-            String inactivityTime = null;
-         */
+    /**
+     * Supposing there are n slots in the selenium grid, get a number
+     * in the range [0, ..., n - 1], representing the particular
+     * slot we are using. This number will be used as the "user index"
+     * identifying a unique Survey Tool simulated user, with a fictitious
+     * email address like "driver-123@cldr-apps-webdriver.org", where
+     * 123 would be the user index.
+     *
+     * @param sessionId the session id associated with our slot
+     *
+     * @return the user index, a nonnegative integer
+     */
+    private int getUserIndexFromGrid(SessionId sessionId) {
+        String url = REMOTE_WEBDRIVER_URL + "/status"; // http://localhost:4444/status
+        driver.get(url);
+        String jsonString = driver.findElement(By.tagName("body")).getText();
+        SurveyDriverLog.println("jsonString = " + jsonString);
+
+        // Ideally, at this point we could convert the json into a NodeStatus object
+        // NodeStatus nodeStatus = NodeStatus.fromJson(jsonString);
+        //  https://www.selenium.dev/selenium/docs/api/java/org/openqa/selenium/grid/data/NodeStatus.html
+        // Unfortunately it's not clear how to do that...
+        // Another way would be with gson:
+        //  SurveyDriverTestSession obj = new Gson().fromJson(jsonString, SurveyDriverNodeStatus.class);
+        // -- with our own imitation of NodeStatus, but that seems too difficult and error-prone.
+        // Another way would be to forget about NodeStatus, and simply assign a different user index
+        // each time we launch SurveyDriver, using our own mechanism independent of the grid...
+
+        // Crude work-around: each slot has "lastStarted" (1970 if never), sometimes followed by sessionId.
+        // For example:
+        // "lastStarted": "2023-12-21T03:24:37.017561Z",
+        //   "sessionId": "19049a348716f4dd825e330c47787573",
+        int uIndex = -1;
+        String sessionIdString = sessionId.toString();
+        int slotCount = 0;
+        for (String line : jsonString.split("\\n")) {
+            if (line.contains("lastStarted")) {
+                ++slotCount;
+            } else if (line.contains("sessionId") && line.contains(sessionIdString)) {
+                uIndex = slotCount - 1;
+                System.out.println("Setting user index to " + uIndex + "; based on " + url);
+                break;
+            }
+        }
+        if (uIndex < 0) {
+            uIndex = new Random().nextInt(9);
+            System.out.println("Setting user index randomly to " + uIndex + "; unable to determine from " + url);
+        }
+        return uIndex;
     }
 }
