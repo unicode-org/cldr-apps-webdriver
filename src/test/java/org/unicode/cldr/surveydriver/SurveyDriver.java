@@ -30,28 +30,27 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 /**
  * Perform automated testing of the CLDR Survey Tool using Selenium WebDriver.
- * <p>
- * This test has been used with the cldr-apps-webdriver project running in IntelliJ. At the same time,
- * cldr-apps can be running either on localhost or on SmokeTest.
- * <p>
- * This code requires installing an implementation of WebDriver, such as chromedriver for Chrome.
- * On macOS, chromedriver can be installed from Terminal with brew as follows:
- *   brew install chromedriver
- * Then, right-click chromedriver, choose Open, and authorize to avoid the macOS error,
- * "“chromedriver” cannot be opened because the developer cannot be verified".
- * Press Ctrl+C to stop this instance of chromedriver.
- * <p>
- * (Testing with geckodriver for Firefox was unsuccessful, but has not been tried recently.)
- * <p>
- * Go to <a href="https://www.selenium.dev/downloads/">selenium.dev/downloads</a> and scroll down
- * to "Selenium Server (Grid)" and follow the link to download a file like selenium-server-4.16.1.jar
- * and save it in the parent directory of cldr-apps-webdriver.
- * <p>
- * Start selenium grid:
- * <p>
- *     sh cldr-apps-webdriver/scripts/selenium-grid-start.sh &
- * <p>
- * Open this file (SurveyDriver.java) in IntelliJ, right-click cldr-apps-webdriver in the Project
+ *
+ * <p>This test has been used with the cldr-apps-webdriver project running in IntelliJ. At the same
+ * time, cldr-apps can be running either on localhost or on SmokeTest.
+ *
+ * <p>This code requires installing an implementation of WebDriver, such as chromedriver for Chrome.
+ * On macOS, chromedriver can be installed from Terminal with brew as follows: brew install
+ * chromedriver Then, right-click chromedriver, choose Open, and authorize to avoid the macOS error,
+ * "“chromedriver” cannot be opened because the developer cannot be verified". Press Ctrl+C to stop
+ * this instance of chromedriver.
+ *
+ * <p>(Testing with geckodriver for Firefox was unsuccessful, but has not been tried recently.)
+ *
+ * <p>Go to <a href="https://www.selenium.dev/downloads/">selenium.dev/downloads</a> and scroll down
+ * to "Selenium Server (Grid)" and follow the link to download a file like
+ * selenium-server-4.16.1.jar and save it in the parent directory of cldr-apps-webdriver.
+ *
+ * <p>Start selenium grid:
+ *
+ * <p>cd cldr-apps-webdriver/scripts; sh selenium-grid-start.sh
+ *
+ * <p>Open this file (SurveyDriver.java) in IntelliJ, right-click cldr-apps-webdriver in the Project
  * panel, and choose "Debug All Tests". You can do this repeatedly to start multiple browsers with
  * simulated vetters vetting at the same time.
  */
@@ -61,10 +60,11 @@ public class SurveyDriver {
      * Enable/disable specific tests using these booleans
      */
     static final boolean TEST_VETTING_TABLE = false;
-    static final boolean TEST_FAST_VOTING = true;
+    static final boolean TEST_FAST_VOTING = false;
     static final boolean TEST_LOCALES_AND_PAGES = false;
     static final boolean TEST_ANNOTATION_VOTING = false;
     static final boolean TEST_XML_UPLOADER = false;
+    static final boolean TEST_DASHBOARD = true;
 
     /*
      * Configure for Survey Tool server, which can be localhost, cldr-smoke, cldr-staging, ...
@@ -81,9 +81,7 @@ public class SurveyDriver {
      * the WebDriver interface). Otherwise, the driver could be a ChromeDriver, or FirefoxDriver, EdgeDriver,
      * or SafariDriver (all subclasses of RemoteWebDriver) if we add options for those.
      * While much of the code in this class works either way, Selenium Grid needs the driver to be a
-     * RemoteWebDriver and requires installation of a hub and one or more "slots", which can be done by
-     *
-     *     sh scripts/selenium-grid-start.sh
+     * RemoteWebDriver and requires installation, see above comment about selenium-grid-start.sh
      */
     static final boolean USE_REMOTE_WEBDRIVER = true;
     static final String REMOTE_WEBDRIVER_URL = "http://localhost:4444";
@@ -93,10 +91,9 @@ public class SurveyDriver {
     private SessionId sessionId = null;
 
     /**
-     * A nonnegative integer associated with a particular simulated user of Survey Tool,
-     * and with a particular instance of a browser in the selenium grid. The user's
-     * email address will be like "driver-123@cldr-apps-webdriver.org", where 123
-     * would be the userIndex.
+     * A nonnegative integer associated with a particular simulated user of Survey Tool, and with a
+     * particular instance of a browser in the selenium grid. The user's email address will be like
+     * "driver-123@cldr-apps-webdriver.org", where 123 would be the userIndex.
      */
     private int userIndex = 0; // possibly changed below, see getUserIndexFromGrid
 
@@ -120,12 +117,13 @@ public class SurveyDriver {
         if (TEST_XML_UPLOADER) {
             assertTrue(new SurveyDriverXMLUploader(s).testXMLUploader());
         }
+        if (TEST_DASHBOARD) {
+            assertTrue(new SurveyDriverDashboard(s).test());
+        }
         s.tearDown();
     }
 
-    /**
-     * Set up the driver and its "wait" object.
-     */
+    /** Set up the driver and its "wait" object. */
     private void setUp() {
         LoggingPreferences logPrefs = new LoggingPreferences();
         logPrefs.enable(LogType.BROWSER, Level.ALL);
@@ -151,9 +149,7 @@ public class SurveyDriver {
         }
     }
 
-    /**
-     * Clean up when finished testing.
-     */
+    /** Clean up when finished testing. */
     private void tearDown() {
         SurveyDriverLog.println("cldr-apps-webdriver is quitting, goodbye from sessionId " + sessionId);
         if (driver != null) {
@@ -171,14 +167,12 @@ public class SurveyDriver {
     }
 
     /**
-     * Test "fast" voting, that is, voting for several items on a page, and measuring
-     * the time of response.
-     * <p>
-     * Purposes:
-     * (1) study the sequence of events, especially client-server traffic,
-     * when multiple voting events (maybe by a single user) are being handled;
-     * (2) simulate simultaneous input from multiple vetters, for integration and
-     * performance testing under high load.
+     * Test "fast" voting, that is, voting for several items on a page, and measuring the time of
+     * response.
+     *
+     * <p>Purposes: (1) study the sequence of events, especially client-server traffic, when
+     * multiple voting events (maybe by a single user) are being handled; (2) simulate simultaneous
+     * input from multiple vetters, for integration and performance testing under high load.
      */
     private boolean testFastVoting() {
         if (!login()) {
@@ -435,9 +429,7 @@ public class SurveyDriver {
         return true;
     }
 
-    /**
-     * Log into Survey Tool.
-     */
+    /** Log into Survey Tool. */
     public boolean login() {
         final String url = BASE_URL;
         SurveyDriverLog.println("Logging in to " + url);
@@ -484,7 +476,7 @@ public class SurveyDriver {
         return clickButtonByXpath(loginXpath, url);
     }
 
-    private boolean clickButtonByXpath(String xpath, String url) {
+    public boolean clickButtonByXpath(String xpath, String url) {
         WebElement el = getClickableElementByXpath(xpath, url);
         if (el == null) {
             return false;
@@ -519,12 +511,12 @@ public class SurveyDriver {
 
     private WebElement getClickableElementByXpath(String xpath, String url) {
         try {
-            wait.until(
-                (ExpectedCondition<Boolean>) webDriver -> driver.findElement(By.xpath(xpath)) != null
-            );
+            wait.until((ExpectedCondition<Boolean>) webDriver -> driver.findElement(By.xpath(xpath)) != null);
         } catch (Exception e) {
             SurveyDriverLog.println(e);
-            SurveyDriverLog.println("❌ Test failed, timed out waiting for element to be found by xpath " + xpath + " in url " + url);
+            SurveyDriverLog.println(
+                "❌ Test failed, timed out waiting for element to be found by xpath " + xpath + " in url " + url
+            );
             return null;
         }
         WebElement el;
@@ -534,7 +526,8 @@ public class SurveyDriver {
         } catch (Exception e) {
             SurveyDriverLog.println(e);
             SurveyDriverLog.println(
-                "❌ Test failed, timed out waiting for " + xpath + " button to be clickable in " + url);
+                "❌ Test failed, timed out waiting for " + xpath + " button to be clickable in " + url
+            );
             return null;
         }
         return el;
@@ -576,9 +569,7 @@ public class SurveyDriver {
         return true;
     }
 
-    /**
-     * Test all the locales and pages we're interested in.
-     */
+    /** Test all the locales and pages we're interested in. */
     private boolean testAllLocalesAndPages() {
         String[] locales = SurveyDriverData.getLocales();
         String[] pages = SurveyDriverData.getPages();
@@ -586,7 +577,8 @@ public class SurveyDriver {
          * Reference: https://unicode.org/cldr/trac/ticket/11238 "browser console shows error message,
          * there is INHERITANCE_MARKER without inheritedValue"
          */
-        String searchString = "INHERITANCE_MARKER without inheritedValue"; // formerly, "there is no Bailey Target item"
+        String searchString = "INHERITANCE_MARKER without inheritedValue"; // formerly, "there is no Bailey Target
+        // item"
 
         for (String loc : locales) {
             // for (PathHeader.PageId page : PathHeader.PageId.values()) {
@@ -602,10 +594,8 @@ public class SurveyDriver {
     /**
      * Test the given locale and page.
      *
-     * @param loc
-     *            the locale string, like "pt_PT"
-     * @param page
-     *            the page name, like "Alphabetic_Information"
+     * @param loc the locale string, like "pt_PT"
+     * @param page the page name, like "Alphabetic_Information"
      * @return true if all parts of the test pass, else false
      */
     private boolean testOneLocationAndPage(String loc, String page, String searchString) {
@@ -686,8 +676,7 @@ public class SurveyDriver {
     /**
      * Count how many log entries contain the given string.
      *
-     * @param searchString
-     *            the string for which to search
+     * @param searchString the string for which to search
      * @return the number of occurrences
      */
     private int countLogEntriesContainingString(String searchString) {
@@ -738,7 +727,12 @@ public class SurveyDriver {
         String loadingId = "LoadingMessageSection";
         try {
             wait.until(
-                (ExpectedCondition<Boolean>) webDriver -> Objects.requireNonNull(webDriver).findElement(By.id(loadingId)).getCssValue("display").contains("none")
+                (ExpectedCondition<Boolean>) webDriver ->
+                    Objects
+                        .requireNonNull(webDriver)
+                        .findElement(By.id(loadingId))
+                        .getCssValue("display")
+                        .contains("none")
             );
         } catch (Exception e) {
             SurveyDriverLog.println(e);
@@ -749,8 +743,8 @@ public class SurveyDriver {
     }
 
     /**
-     * Hide the element whose id is "left-sidebar", by simulating the appropriate mouse action if it's
-     * visible.
+     * Hide the element whose id is "left-sidebar", by simulating the appropriate mouse action if
+     * it's visible.
      *
      * @param url the url we're loading
      * @return true for success, false for failure
@@ -870,6 +864,29 @@ public class SurveyDriver {
             break;
         }
         return inputEl;
+    }
+
+    /**
+     * Wait until the element with the given class name is clickable, then click it.
+     *
+     * @param className the class name
+     * @param url the url we're loading
+     * @return true for success, false for failure
+     */    public boolean clickButtonByClassName(String className, String url) {
+        WebElement button = driver.findElement(By.className(className));
+        if (!waitUntilElementClickable(button, url)) {
+            return false;
+        }
+        try {
+            button.click();
+        } catch (Exception e) {
+            SurveyDriverLog.println(e);
+            SurveyDriverLog.println(
+                "❌ Test failed, maybe timed out, waiting button with class " + className + " to be clickable in " + url
+            );
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -1013,7 +1030,8 @@ public class SurveyDriver {
      * Wait until an element with class with the given name exists, or wait until one doesn't.
      *
      * @param className the class name
-     * @param checking true to wait until such an element exists, or false to wait until no such element exists
+     * @param checking true to wait until such an element exists, or false to wait until no such
+     *     element exists
      * @param url the url we're loading
      * @return true for success, false for failure
      */
@@ -1043,7 +1061,8 @@ public class SurveyDriver {
      * Wait until an element with id with the given name exists, or wait until one doesn't.
      *
      * @param idName the id name
-     * @param checking true to wait until such an element exists, or false to wait until no such element exists
+     * @param checking true to wait until such an element exists, or false to wait until no such
+     *     element exists
      * @param url the url we're loading
      * @return true for success, false for failure
      */
@@ -1070,34 +1089,34 @@ public class SurveyDriver {
     }
 
     /**
-     * Supposing there are n slots in the selenium grid, get a number
-     * in the range [0, ..., n - 1], representing the particular
-     * slot we are using. This number will be used as the "user index"
-     * identifying a unique Survey Tool simulated user, with a fictitious
-     * email address like "driver-123@cldr-apps-webdriver.org", where
-     * 123 would be the user index.
+     * Supposing there are n slots in the selenium grid, get a number in the range [0, ..., n - 1],
+     * representing the particular slot we are using. This number will be used as the "user index"
+     * identifying a unique Survey Tool simulated user, with a fictitious email address like
+     * "driver-123@cldr-apps-webdriver.org", where 123 would be the user index.
      *
      * @param sessionId the session id associated with our slot
-     *
      * @return the user index, a nonnegative integer
      */
     private int getUserIndexFromGrid(SessionId sessionId) {
         String url = REMOTE_WEBDRIVER_URL + "/status"; // http://localhost:4444/status
         driver.get(url);
         String jsonString = driver.findElement(By.tagName("body")).getText();
-        SurveyDriverLog.println("jsonString = " + jsonString);
+        // SurveyDriverLog.println("jsonString = " + jsonString);
 
         // Ideally, at this point we could convert the json into a NodeStatus object
         // NodeStatus nodeStatus = NodeStatus.fromJson(jsonString);
-        //  https://www.selenium.dev/selenium/docs/api/java/org/openqa/selenium/grid/data/NodeStatus.html
+        //
+        // https://www.selenium.dev/selenium/docs/api/java/org/openqa/selenium/grid/data/NodeStatus.html
         // Unfortunately it's not clear how to do that...
         // Another way would be with gson:
-        //  SurveyDriverTestSession obj = new Gson().fromJson(jsonString, SurveyDriverNodeStatus.class);
+        //  SurveyDriverTestSession obj = new Gson().fromJson(jsonString,
+        // SurveyDriverNodeStatus.class);
         // -- with our own imitation of NodeStatus, but that seems too difficult and error-prone.
         // Another way would be to forget about NodeStatus, and simply assign a different user index
         // each time we launch SurveyDriver, using our own mechanism independent of the grid...
 
-        // Crude work-around: each slot has "lastStarted" (1970 if never), sometimes followed by sessionId.
+        // Crude work-around: each slot has "lastStarted" (1970 if never), sometimes followed by
+        // sessionId.
         // For example:
         // "lastStarted": "2023-12-21T03:24:37.017561Z",
         //   "sessionId": "19049a348716f4dd825e330c47787573",
