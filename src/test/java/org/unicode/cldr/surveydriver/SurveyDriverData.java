@@ -1,36 +1,35 @@
-/**
- *
- */
+/** */
 package org.unicode.cldr.surveydriver;
 
-/**
- * Data for SurveyDriver: lists of locales and pages
- */
+/** Data for SurveyDriver: lists of locales and pages */
 public class SurveyDriverData {
 
     /**
-     * This list of page names was created by temporarily commenting out the toString function
-     * in PathHeader.java, and inserting this line into the PageId initialization function:
+     * This list of page names was created by temporarily commenting out the toString function in
+     * PathHeader.java, and inserting this line into the PageId initialization function:
      * System.out.println("PageId raw name: " + this.toString());
-     * <p>
-     * It would be better to have an API for requesting this list from the ST back end at runtime!
-     * <p>
-     * There is a PageId enum defined in PathHeader.java. We could link with the
-     * cldr-apps code and access that enum directly. However, there are difficulties
-     * with initiation, like "java.lang.RuntimeException: CLDRConfigImpl used before SurveyMain.init() called!"
-     * "Set -DCLDR_ENVIRONMENT=UNITTEST if you are in the test cases." Follow up on that possibility later.
-     * In the meantime, we can copy and simplify the enum from PathHeader.java, since all we need here
-     * is an array of strings.
-     * <p>
-     * PageId versus SectionId: PageId.Alphabetic_Information is in the section SectionId.Core_Data
-     * <p>
-     * Alphabetic_Information(SectionId.Core_Data, "Alphabetic Information")
-     * <p>
-     * Each page is one web page; a section may encompass multiple pages, not all visible at once.
-     * (There may also be multiple headers in one page. See PathHeader.txt which is a source file.)
+     *
+     * <p>It would be better to have an API for requesting this list from the ST back end at
+     * runtime!
+     *
+     * <p>There is a PageId enum defined in PathHeader.java. We could link with the cldr-apps code
+     * and access that enum directly. However, there are difficulties with initiation, like
+     * "java.lang.RuntimeException: CLDRConfigImpl used before SurveyMain.init() called!" "Set
+     * -DCLDR_ENVIRONMENT=UNITTEST if you are in the test cases." Follow up on that possibility
+     * later. In the meantime, we can copy and simplify the enum from PathHeader.java, since all we
+     * need here is an array of strings.
+     *
+     * <p>PageId versus SectionId: PageId.Alphabetic_Information is in the section
+     * SectionId.Core_Data
+     *
+     * <p>Alphabetic_Information(SectionId.Core_Data, "Alphabetic Information")
+     *
+     * <p>Each page is one web page; a section may encompass multiple pages, not all visible at
+     * once. (There may also be multiple headers in one page. See PathHeader.txt which is a source
+     * file.)
      */
     private static final String[] pages = {
-        // prettier-ignore
+        // spotless:off
         "Alphabetic_Information", "Numbering_Systems", "LinguisticElements", "Locale_Name_Patterns",
         "Languages_A_D", "Languages_E_J", "Languages_K_N", "Languages_O_S", "Languages_T_Z", "Scripts",
         "Territories", "T_NAmerica", "T_SAmerica", "T_Africa", "T_Europe", "T_Asia", "T_Oceania", "Locale_Variants",
@@ -55,23 +54,23 @@ public class SurveyDriverData {
         "WeekData", "Measurement", "Language", "RBNF", "Segmentation", "DayPeriod", "Category", "Smileys", "People",
         "Animals_Nature", "Food_Drink", "Travel_Places", "Activities", "Objects", "Symbols2", "Flags", "Component",
         "Typography",
+        // spotless:on
     };
 
-    /**
-     * These are pages for which special annotation vote resolution is applicable
-     */
+    /** These are pages for which special annotation vote resolution is applicable */
     private static final String[] annotationPages = {
-        // prettier-ignore
+        // spotless:off
         "Category", "Smileys", "People", "Animals_Nature", "Food_Drink",
         "Travel_Places", "Activities", "Objects", "Symbols2", "Flags",
+        // spotless:on
     };
 
     /**
-     * This list of locales was obtained by putting a breakpoint on SurveyAjax.getLocalesSet, getting its
-     * return value, and adding quotation marks by search/replace.
+     * This list of locales was obtained by putting a breakpoint on SurveyAjax.getLocalesSet,
+     * getting its return value, and adding quotation marks by search/replace.
      */
     private static final String[] locales = {
-        // prettier-ignore
+        // spotless:off
         "aa", "aa_DJ", "aa_ER", "aa_ET", "af", "af_NA", "af_ZA", "agq", "agq_CM",
         "ak",
         "ak_GH", "am", "am_ET", "ar", "ar_001", "ar_AE", "ar_BH", "ar_DJ", "ar_DZ", "ar_EG", "ar_EH", "ar_ER",
@@ -151,6 +150,7 @@ public class SurveyDriverData {
         "yue_Hans", "yue_Hans_CN", "yue_Hant", "yue_Hant_HK", "zgh", "zgh_MA", "zh", "zh_Hans", "zh_Hans_CN",
         "zh_Hans_HK", "zh_Hans_MO", "zh_Hans_SG", "zh_Hant", "zh_Hant_HK", "zh_Hant_MO", "zh_Hant_TW", "zu",
         "zu_ZA",
+        // spotless:on
     };
 
     public static String[] getPages() {

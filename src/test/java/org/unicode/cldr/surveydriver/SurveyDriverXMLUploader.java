@@ -43,7 +43,8 @@ public class SurveyDriverXMLUploader {
         // between these options:
         // 1. Convert XLSX to XML
         // 2. Upload XML as your vote (Bulk Upload)
-        SurveyDriverLog.println("❌ XML-Upload test needs revision for changed interface in Survey Tool!");
+        SurveyDriverLog.println(
+                "❌ XML-Upload test needs revision for changed interface in Survey Tool!");
 
         switchToNewTabOrWindow();
 
@@ -70,12 +71,11 @@ public class SurveyDriverXMLUploader {
         }
         // driver.switchTo().defaultContent(); -- doesn't work with Chrome on macOS
         String currentTabHandle = driver.getWindowHandle();
-        String newTabHandle = driver
-            .getWindowHandles()
-            .stream()
-            .filter(handle -> !handle.equals(currentTabHandle))
-            .findFirst()
-            .get();
+        String newTabHandle =
+                driver.getWindowHandles().stream()
+                        .filter(handle -> !handle.equals(currentTabHandle))
+                        .findFirst()
+                        .get();
         driver.switchTo().window(newTabHandle);
         try {
             Thread.sleep(1000);
@@ -102,11 +102,12 @@ public class SurveyDriverXMLUploader {
         clickEl = clickEl.findElement(By.xpath("./..")); // parent
         new Actions(s.driver).moveToElement(clickEl, 0, 0).build().perform();
         if (!s.waitUntilElementClickable(clickEl, url)) {
-            SurveyDriverLog.println("❌ XML-Upload test failed waiting for main menu to be clickable");
+            SurveyDriverLog.println(
+                    "❌ XML-Upload test failed waiting for main menu to be clickable");
             return false;
         }
         int repeats = 0;
-        for (;;) {
+        for (; ; ) {
             try {
                 clickEl.click();
                 return true;
@@ -114,7 +115,8 @@ public class SurveyDriverXMLUploader {
                 if (++repeats > 4) {
                     break;
                 }
-                SurveyDriverLog.println("clickOnMainMenu repeating for StaleElementReferenceException in " + url);
+                SurveyDriverLog.println(
+                        "clickOnMainMenu repeating for StaleElementReferenceException in " + url);
                 clickEl = s.driver.findElement(By.className(className));
             } catch (Exception e) {
                 SurveyDriverLog.println(e);
@@ -145,11 +147,12 @@ public class SurveyDriverXMLUploader {
         }
         new Actions(s.driver).moveToElement(clickEl, 0, 0).build().perform();
         if (!s.waitUntilElementClickable(clickEl, url)) {
-            SurveyDriverLog.println("❌ XML-Upload test failed waiting for " + linkText + " menu to be clickable");
+            SurveyDriverLog.println(
+                    "❌ XML-Upload test failed waiting for " + linkText + " menu to be clickable");
             return false;
         }
         int repeats = 0;
-        for (;;) {
+        for (; ; ) {
             try {
                 clickEl.click();
                 return true;
@@ -157,7 +160,9 @@ public class SurveyDriverXMLUploader {
                 if (++repeats > 4) {
                     break;
                 }
-                SurveyDriverLog.println("clickOnGearElement repeating for StaleElementReferenceException in " + url);
+                SurveyDriverLog.println(
+                        "clickOnGearElement repeating for StaleElementReferenceException in "
+                                + url);
                 clickEl = s.driver.findElement(By.partialLinkText(linkText));
             } catch (Exception e) {
                 SurveyDriverLog.println(e);
@@ -177,9 +182,9 @@ public class SurveyDriverXMLUploader {
     private boolean specifyXmlFileToUpload(String url) {
         final String id = "file";
         final String xmlPathname =
-            "/Users/tbishop/Documents/WenlinDocs/Organizations/Unicode/CLDR_job/xml_upload_test.xml";
+                "/Users/tbishop/Documents/WenlinDocs/Organizations/Unicode/CLDR_job/xml_upload_test.xml";
         int repeats = 0;
-        for (;;) {
+        for (; ; ) {
             if (!s.waitUntilIdExists(id, true, url)) {
                 SurveyDriverLog.println("❌ XML-Upload test failed waiting for id to exist: " + id);
                 return false;
@@ -191,7 +196,8 @@ public class SurveyDriverXMLUploader {
             }
             new Actions(s.driver).moveToElement(clickEl, 0, 0).build().perform();
             if (!s.waitUntilElementClickable(clickEl, url)) {
-                SurveyDriverLog.println("❌ XML-Upload test failed waiting for element to be clickable: " + id);
+                SurveyDriverLog.println(
+                        "❌ XML-Upload test failed waiting for element to be clickable: " + id);
                 return false;
             }
             try {
@@ -203,8 +209,8 @@ public class SurveyDriverXMLUploader {
                     break;
                 }
                 SurveyDriverLog.println(
-                    "specifyXmlFileToUpload repeating for StaleElementReferenceException in " + url
-                );
+                        "specifyXmlFileToUpload repeating for StaleElementReferenceException in "
+                                + url);
             } catch (Exception e) {
                 SurveyDriverLog.println(e);
                 break;

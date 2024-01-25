@@ -1,8 +1,6 @@
 package org.unicode.cldr.surveydriver;
 
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 
 public class SurveyDriverDashboard {
 
@@ -53,7 +51,8 @@ public class SurveyDriverDashboard {
         // button is from GeneralInfo.vue, and its class includes "general-open-dash".
         // There are other "Open Dashboard" buttons produced in cldrGui.mjs, and a
         // "Dashboard" item in the left-sidebar.
-        // For unknown reasons, clickButtonByXpath with "//button[contains(., 'Open Dashboard')]" fails here.
+        // For unknown reasons, clickButtonByXpath with "//button[contains(., 'Open Dashboard')]"
+        // fails here.
         if (!s.clickButtonByClassName("general-open-dash", url)) {
             return false;
         }

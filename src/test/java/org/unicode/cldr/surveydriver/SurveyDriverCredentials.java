@@ -10,6 +10,7 @@ public class SurveyDriverCredentials {
      * "driver-123@cldr-apps-webdriver.org"
      */
     private static final String EMAIL_AT_DOMAIN = "@cldr-apps-webdriver.org";
+
     private static final String EMAIL_PREFIX = "driver-";
 
     /**
@@ -17,6 +18,7 @@ public class SurveyDriverCredentials {
      * -- not in version control; contains a line WEBDRIVER_PASSWORD=...
      */
     private static final String PROPS_FILENAME = "surveydriver.properties";
+
     private static final String PROPS_PASSWORD_KEY = "WEBDRIVER_PASSWORD";
     private static String webdriverPassword = null;
 
@@ -27,8 +29,8 @@ public class SurveyDriverCredentials {
     }
 
     /**
-     * Get credentials for logging in as a particular user depending on which Selenium slot
-     * we're running on.
+     * Get credentials for logging in as a particular user depending on which Selenium slot we're
+     * running on.
      */
     public static SurveyDriverCredentials getForUser(int userIndex) {
         String email = EMAIL_PREFIX + userIndex + EMAIL_AT_DOMAIN;
@@ -43,7 +45,8 @@ public class SurveyDriverCredentials {
         if (webdriverPassword != null) {
             return webdriverPassword;
         }
-        final InputStream stream = SurveyDriverCredentials.class.getResourceAsStream(PROPS_FILENAME);
+        final InputStream stream =
+                SurveyDriverCredentials.class.getResourceAsStream(PROPS_FILENAME);
         if (stream == null) {
             throw new RuntimeException("File not found: " + PROPS_FILENAME);
         }
