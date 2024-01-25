@@ -14,9 +14,7 @@ public class SurveyDriverXMLUploader {
         this.s = s;
     }
 
-    /**
-     * Test the XMLUploader interface ("Upload XML" in the gear menu).
-     */
+    /** Test the XMLUploader interface ("Upload XML" in the gear menu). */
     public boolean testXMLUploader() {
         if (!s.login()) {
             return false;
@@ -39,6 +37,14 @@ public class SurveyDriverXMLUploader {
                 return false;
             }
         } while (!clickOnUploadXMLElement(url));
+
+        // The interface has changed.
+        // There is still a separate tab for bulk upload, but now there's a new step, choosing
+        // between these options:
+        // 1. Convert XLSX to XML
+        // 2. Upload XML as your vote (Bulk Upload)
+        SurveyDriverLog.println("❌ XML-Upload test needs revision for changed interface in Survey Tool!");
+
         switchToNewTabOrWindow();
 
         if (!specifyXmlFileToUpload(url)) {
@@ -50,8 +56,8 @@ public class SurveyDriverXMLUploader {
     }
 
     /**
-     * After new tab or window is created, switch WebDriver to it.
-     * Otherwise, our actions would still operate on the old window.
+     * After new tab or window is created, switch WebDriver to it. Otherwise, our actions would
+     * still operate on the old window.
      */
     private void switchToNewTabOrWindow() {
         WebDriver driver = s.driver;
@@ -81,7 +87,7 @@ public class SurveyDriverXMLUploader {
     }
 
     /**
-     * Click on the gear menu.
+     * Click on the main menu.
      *
      * @param url the url we're loading
      * @return true for success, false for failure
@@ -120,13 +126,13 @@ public class SurveyDriverXMLUploader {
     }
 
     /**
-     * Click on the "Upload XML" item in the gear menu.
+     * Click on the "Upload (Bulk Import)" item in the gear menu.
      *
      * @param url the url we're loading
      * @return true for success, false for failure
      */
     private boolean clickOnUploadXMLElement(String url) {
-        String linkText = "Upload XML";
+        String linkText = "Upload (Bulk Import)";
         WebElement clickEl = null;
         try {
             clickEl = s.driver.findElement(By.partialLinkText(linkText));
