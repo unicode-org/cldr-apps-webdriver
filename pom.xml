@@ -14,6 +14,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
+    <spotless.version>2.35.0</spotless.version>
+    <google-java-style.version>1.15.0</google-java-style.version>
   </properties>
   <dependencies>
     <dependency>
@@ -46,6 +48,27 @@
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>${spotless.version}</version>
+          <configuration>
+            <!-- optional: limit format enforcement to just the files changed by this feature branch -->
+            <!-- You can explicitly disable ratchet functionality by providing the value 'NONE': -->
+            <ratchetFrom>NONE</ratchetFrom>
+            <!-- define a language-specific format -->
+            <java>
+              <!-- no need to specify files, inferred automatically, but you can if you want -->
+              <!-- apply a specific flavor of google-java-format and reflow long strings -->
+              <googleJavaFormat>
+                <!-- version of google-java-style -->
+                <version>${google-java-style.version}</version>
+                <style>AOSP</style>
+                <reflowLongStrings>false</reflowLongStrings>
+              </googleJavaFormat>
+            </java>
+          </configuration>
+        </plugin>
         <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
