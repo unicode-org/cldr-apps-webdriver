@@ -15,9 +15,11 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 public class SurveyDriverVettingTable {
 
     /**
-     * Test the vetting table to make sure it contains the expected content under certain circumstances.
-     * <p>
-     * Purpose: make sure that code revisions do not cause unintended changes to the table contents.
+     * Test the vetting table to make sure it contains the expected content under certain
+     * circumstances.
+     *
+     * <p>Purpose: make sure that code revisions do not cause unintended changes to the table
+     * contents.
      */
     public static boolean testVettingTable(SurveyDriver s) {
         if (!s.login()) {
@@ -46,7 +48,8 @@ public class SurveyDriverVettingTable {
         }
 
         JavascriptExecutor js = (JavascriptExecutor) driver;
-        js.executeScript("window.testTable = function(theTable, reuseTable) { console.log(theTable.json); }");
+        js.executeScript(
+                "window.testTable = function(theTable, reuseTable) { console.log(theTable.json); }");
 
         /*
          * Get the table three times.
@@ -55,7 +58,7 @@ public class SurveyDriverVettingTable {
          * Third time, after voting for new value "taml" in first row.
          * Finally, abstain so the next user will find the db the same as it was.
          */
-        String[] table = { null, null, null };
+        String[] table = {null, null, null};
         final int tableCount = 3;
         String dataDirName;
         try {
@@ -76,11 +79,12 @@ public class SurveyDriverVettingTable {
                 return false;
             }
             if (t > 0 && table[t].equals(table[t - 1])) {
-                SurveyDriverLog.println("File " + fName + " should not be identical to the previous file");
+                SurveyDriverLog.println(
+                        "File " + fName + " should not be identical to the previous file");
                 return false;
             }
         }
-        String[] cellClasses = { "proposedcell", "input", "nocell" };
+        String[] cellClasses = {"proposedcell", "input", "nocell"};
         String rowId = "r@7b8ee7884f773afa";
         int i = 0;
         int goodTableCount = 0;
@@ -106,7 +110,8 @@ public class SurveyDriverVettingTable {
             try {
                 Thread.sleep(5000);
             } catch (Exception e) {
-                SurveyDriverLog.println("Sleep interrupted before finished waiting to get table html; " + e);
+                SurveyDriverLog.println(
+                        "Sleep interrupted before finished waiting to get table html; " + e);
             }
 
             /*
@@ -125,18 +130,17 @@ public class SurveyDriverVettingTable {
                 ++goodTableCount;
             } else {
                 SurveyDriverLog.println(
-                    "❌ table " +
-                    i +
-                    " is different (" +
-                    tableHtml.length() +
-                    " units):\n" +
-                    tableHtml +
-                    "\n\nExpected (" +
-                    table[i].length() +
-                    " units):\n" +
-                    table[i] +
-                    "\n"
-                );
+                        "❌ table "
+                                + i
+                                + " is different ("
+                                + tableHtml.length()
+                                + " units):\n"
+                                + tableHtml
+                                + "\n\nExpected ("
+                                + table[i].length()
+                                + " units):\n"
+                                + table[i]
+                                + "\n");
             }
             ++i;
             boolean doAdd = cell.equals("input");
@@ -145,7 +149,7 @@ public class SurveyDriverVettingTable {
             WebElement rowEl = null, columnEl, clickEl = null;
 
             int repeats = 0;
-            for (;;) {
+            for (; ; ) {
                 try {
                     rowEl = driver.findElement(By.id(rowId));
                 } catch (StaleElementReferenceException e) {
@@ -153,18 +157,18 @@ public class SurveyDriverVettingTable {
                         break;
                     }
                     SurveyDriverLog.println(
-                        "Continuing after StaleElementReferenceException for findElement by id rowId " +
-                        rowId +
-                        " for " +
-                        url
-                    );
+                            "Continuing after StaleElementReferenceException for findElement by id rowId "
+                                    + rowId
+                                    + " for "
+                                    + url);
                     continue;
                 } catch (Exception e) {
                     SurveyDriverLog.println(e);
                     break;
                 }
                 if (rowEl == null) {
-                    SurveyDriverLog.println("❌ Vetting-table test failed, missing row id " + rowId + " for " + url);
+                    SurveyDriverLog.println(
+                            "❌ Vetting-table test failed, missing row id " + rowId + " for " + url);
                     return false;
                 }
                 try {
@@ -174,11 +178,10 @@ public class SurveyDriverVettingTable {
                         break;
                     }
                     SurveyDriverLog.println(
-                        "Continuing after StaleElementReferenceException for findElement by class cellClass " +
-                        cellClass +
-                        " for " +
-                        url
-                    );
+                            "Continuing after StaleElementReferenceException for findElement by class cellClass "
+                                    + cellClass
+                                    + " for "
+                                    + url);
                     continue;
                 } catch (Exception e) {
                     SurveyDriverLog.println(e);
@@ -186,8 +189,12 @@ public class SurveyDriverVettingTable {
                 }
                 if (columnEl == null) {
                     SurveyDriverLog.println(
-                        "❌ Vetting-table test failed, no column " + cellClass + " for row " + rowId + " for " + url
-                    );
+                            "❌ Vetting-table test failed, no column "
+                                    + cellClass
+                                    + " for row "
+                                    + rowId
+                                    + " for "
+                                    + url);
                     return false;
                 }
                 try {
@@ -197,11 +204,10 @@ public class SurveyDriverVettingTable {
                         break;
                     }
                     SurveyDriverLog.println(
-                        "Continuing after StaleElementReferenceException for findElement by tagName " +
-                        rowId +
-                        " for " +
-                        url
-                    );
+                            "Continuing after StaleElementReferenceException for findElement by tagName "
+                                    + rowId
+                                    + " for "
+                                    + url);
                     continue;
                 } catch (Exception e) {
                     SurveyDriverLog.println(e);
@@ -211,11 +217,16 @@ public class SurveyDriverVettingTable {
             }
             if (clickEl == null) {
                 SurveyDriverLog.println(
-                    "❌ Vetting-table test failed, no tag " + tagName + " for row " + rowId + " for " + url
-                );
+                        "❌ Vetting-table test failed, no tag "
+                                + tagName
+                                + " for row "
+                                + rowId
+                                + " for "
+                                + url);
                 return false;
             }
-            clickEl = s.waitUntilRowCellTagElementClickable(clickEl, rowId, cellClass, tagName, url);
+            clickEl =
+                    s.waitUntilRowCellTagElementClickable(clickEl, rowId, cellClass, tagName, url);
             if (clickEl == null) {
                 return false;
             }
@@ -224,8 +235,10 @@ public class SurveyDriverVettingTable {
             } catch (Exception e) {
                 SurveyDriverLog.println(e);
                 SurveyDriverLog.println(
-                    "❌ Fast vote test failed, invisibilityOfElementLocated overlay for row " + rowId + " for " + url
-                );
+                        "❌ Fast vote test failed, invisibilityOfElementLocated overlay for row "
+                                + rowId
+                                + " for "
+                                + url);
                 return false;
             }
             try {
@@ -235,12 +248,18 @@ public class SurveyDriverVettingTable {
                     break;
                 }
                 SurveyDriverLog.println(
-                    "Continuing after StaleElementReferenceException for clickEl.click for row " + rowId + " for " + url
-                );
+                        "Continuing after StaleElementReferenceException for clickEl.click for row "
+                                + rowId
+                                + " for "
+                                + url);
                 continue;
             } catch (Exception e) {
                 SurveyDriverLog.println(e);
-                SurveyDriverLog.println("❌ Vetting-table test failed, clickEl.click for row " + rowId + " for " + url);
+                SurveyDriverLog.println(
+                        "❌ Vetting-table test failed, clickEl.click for row "
+                                + rowId
+                                + " for "
+                                + url);
                 return false;
             }
             if (doAdd) {
@@ -254,9 +273,12 @@ public class SurveyDriverVettingTable {
                     SurveyDriverLog.println("Warning: continuing, didn't see input box for " + url);
                     continue;
                 }
-                inputEl = s.waitUntilRowCellTagElementClickable(inputEl, rowId, cellClass, "input", url);
+                inputEl =
+                        s.waitUntilRowCellTagElementClickable(
+                                inputEl, rowId, cellClass, "input", url);
                 if (inputEl == null) {
-                    SurveyDriverLog.println("Warning: continuing, input box not clickable for " + url);
+                    SurveyDriverLog.println(
+                            "Warning: continuing, input box not clickable for " + url);
                     continue;
                 }
                 inputEl.clear();
@@ -281,7 +303,9 @@ public class SurveyDriverVettingTable {
          * Work around it here by changing "fallback_root" to "fallback".
          */
         tableHtml = tableHtml.replace("fallback_root", "fallback");
-        tableHtml = tableHtml.replaceFirst("<tbody>\\s*<tr", "<tbody><tr"); // whitespace varies here at random
+        tableHtml =
+                tableHtml.replaceFirst(
+                        "<tbody>\\s*<tr", "<tbody><tr"); // whitespace varies here at random
 
         tableHtml = tableHtml.replace(" hideCov80", ""); // present or absent at random?
         tableHtml = tableHtml.replace(" hideCov100", ""); // present or absent at random?
