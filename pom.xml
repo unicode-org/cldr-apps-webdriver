@@ -7,7 +7,7 @@
   <name>cldr-apps-webdriver</name>
   <licenses>
     <license>
-      <name>Unicode-DFS-2016</name>
+      <name>Unicode-3.0</name>
     </license>
   </licenses>
   <properties>
